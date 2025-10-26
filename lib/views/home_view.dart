@@ -26,7 +26,7 @@ class _HomePageState extends State<HomePage> {
             children: [
               const Text('Selecione o perfil'),
               const SizedBox(height: 20),
-
+        
               // Exibe o cargo selecionado
               Text(
                 _selectedRole == null
@@ -34,7 +34,7 @@ class _HomePageState extends State<HomePage> {
                     : 'Perfil: $_selectedRole',
               ),
               const SizedBox(height: 10),
-
+        
               // PopupMenuButton para selecionar o cargo
               PopupMenuButton<String>(
                 onSelected: (value) {
@@ -56,19 +56,19 @@ class _HomePageState extends State<HomePage> {
                 ],
                 child: const Icon(Icons.arrow_drop_down_circle),
               ),
-
+        
               const SizedBox(height: 30),
-
+        
               ElevatedButton(
                 onPressed: _selectedRole == null
                     ? null
                     : () {
                   // Atualiza o AuthProvider
                   context.read<AuthProvider>().login(_selectedRole!);
-
+        
                   // Redireciona conforme o cargo
                   if (_selectedRole == 'gerente') {
-                    context.go('/manager/gerente');
+                    context.push('/manager/gerente');
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(

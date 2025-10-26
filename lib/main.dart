@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/providers/auth_provider.dart';
 import 'package:freelance/views/home_view.dart';
+import 'package:freelance/views/manager/new_request_view.dart';
 import 'package:freelance/views/manager/requests_view.dart';
 import 'package:freelance/views/rh/fila_pedidos_view.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +23,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/manager/gerente',
       builder: (context, state) => const GerenteView(),
+    ),
+    GoRoute(
+      path: '/manager/new_request',
+      builder: (context, state) => const NovaSolicitacao(),
     ),GoRoute(
       path: '/rh/fila_pedidos',
       builder: (context, state) => const FilaPedidosView(),
