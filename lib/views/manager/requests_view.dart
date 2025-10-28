@@ -21,10 +21,14 @@ class _GerenteViewState extends State<GerenteView> {
       body: Padding(padding: const EdgeInsets.all(16.0),
       child: ListView.builder(
           itemBuilder: (context, itens){
+          
         return Card(
           child: ListTile(
-            title: Text('Pedido ${itens + 1}'),
-            subtitle: const Text('Detalhes do pedido'),
+            title: Text('Solicitção para 25/12/2025 ${itens + 1}'),
+            subtitle: const Text('Solicitação de 5 pessoas para o setor de Reposição.'),
+            onTap: (){
+              context.push('/manager/jornada_view');
+            },
             trailing: ElevatedButton(
 
               onPressed: () {

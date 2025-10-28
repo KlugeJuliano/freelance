@@ -89,8 +89,12 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                       const SizedBox(height: 16),
 
                       // Data/hora início
-                      TimePickerDialog( initialTime: TimeOfDay(hour: 00, minute: 00),),
-
+                      TextField(
+                        decoration: const InputDecoration(
+                          labelText: 'Data/Horário de Início',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
                       
                       const SizedBox(height: 16),
 
