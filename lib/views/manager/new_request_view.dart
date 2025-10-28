@@ -1,8 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-class NovaSolicitacao extends StatelessWidget {
+const List<String> setores = [
+  'Reposição',
+  'Limpeza',
+  'Açougue',
+  'Segurança',
+  'Cozinha',
+  'Frios',
+  'Operador de Caixa',
+  'Fiscal de Loja',
+  'Fiscal de caixa',
+  'Motorista',
+  'Estoquista',
+  'Ajudante de Carga e Descarga',
+  'CPD',
+  'Padaria',
+  'Salgados',
+];
+
+class NovaSolicitacao extends StatefulWidget {
   const NovaSolicitacao({super.key});
+
+  @override
+  State<NovaSolicitacao> createState() => _NovaSolicitacaoState();
+}
+
+class _NovaSolicitacaoState extends State<NovaSolicitacao> {
+  String valuedropDonw = setores[0];
 
   @override
   Widget build(BuildContext context) {
@@ -36,12 +61,21 @@ class NovaSolicitacao extends StatelessWidget {
                   child: Column(
                     children: [
                       // Função
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Função (ex: Repositor)',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
+                    DropdownButton<String>(
+                      hint: Text('Selecione a Função'),
+                      isExpanded: true,
+                      value: valuedropDonw,
+                      items: setores.map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (String? value) {
+                        setState(() {
+                          valuedropDonw = value!;
+                        });
+                      },),
                       const SizedBox(height: 16),
 
                       // Quantidade
@@ -55,12 +89,9 @@ class NovaSolicitacao extends StatelessWidget {
                       const SizedBox(height: 16),
 
                       // Data/hora início
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Data/Horário de Início',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
+                      TimePickerDialog( initialTime: TimeOfDay(hour: 00, minute: 00),),
+
+                      
                       const SizedBox(height: 16),
 
                       // Data/hora fim
