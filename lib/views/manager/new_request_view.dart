@@ -19,6 +19,30 @@ const List<String> setores = [
   'Salgados',
 ];
 
+const List<String> lojas=[
+  'Matriz',
+  'Maracana',
+  'Verissimo',
+  'Fazendão',
+  'Rodovia',
+  'Guarani',
+  'Clbo Centro',
+  'Oliveira',
+  'Xingu',
+  'Taruma',
+  'Araucaria',
+  'Tamadare 1',
+  'Campo Largo',
+  'Tamandare 2',
+  'Quatro Barras',
+  'Pedreira',
+  'Itaperuçu',
+  'Bocaiúva',
+  'Campo Alto',
+  'Jd. das Flores',
+  'Menino Deus',
+];
+
 class NovaSolicitacao extends StatefulWidget {
   const NovaSolicitacao({super.key});
 
@@ -28,6 +52,7 @@ class NovaSolicitacao extends StatefulWidget {
 
 class _NovaSolicitacaoState extends State<NovaSolicitacao> {
   String valuedropDonw = setores[0];
+  String valuedropLoja = lojas[0];
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +102,24 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                         });
                       },),
                       const SizedBox(height: 16),
+                       DropdownButton<String>(
+                      hint: Text('Selecione a Função'),
+                      isExpanded: true,
+                      value: valuedropLoja,
+                      items: lojas.map<DropdownMenuItem<String>>((String value) {
+                        return DropdownMenuItem<String>(
+                          value: value,
+                          child: Text(value),
+                        );
+                      }).toList(),
+                      onChanged: (String? value) {
+                        setState(() {
+                          valuedropLoja = value!;
+                        });
+                      },),
+                      const SizedBox(height: 16),
+
+                      
 
                       // Quantidade
                       TextField(
