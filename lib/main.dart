@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/providers/auth_provider.dart';
+import 'package:freelance/providers/pedido_provider.dart';
 import 'package:freelance/views/direcao/relatorios_consolidados_view.dart';
 import 'package:freelance/views/home_view.dart';
 import 'package:freelance/views/manager/jornada_view.dart';
@@ -11,18 +12,20 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 void main() {
-  runApp(ChangeNotifierProvider(
-    create: (_) => AuthProvider(),
-    child: const MyApp(),
-  ));
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => PedidoProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 final GoRouter _router = GoRouter(
   routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const HomePage(),
-    ),
+    GoRoute(path: '/', builder: (context, state) => const HomePage()),
     GoRoute(
       path: '/manager/gerente',
       builder: (context, state) => const GerenteView(),
@@ -43,7 +46,7 @@ final GoRouter _router = GoRouter(
       path: '/rh/escala_pedidos',
       builder: (context, state) => const EscalacaoView(),
     ),
-     GoRoute(
+    GoRoute(
       path: '/direcao/diretoria',
       builder: (context, state) => const RelatoriosConsolidadosView(),
     ),

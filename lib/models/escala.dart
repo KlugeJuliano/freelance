@@ -1,16 +1,15 @@
-class EscalaModel{
+class EscalaModel {
   String id;
   String pedidoId;
-  String rh_id;
+  String rhId;
   DateTime dataCriacao;
   String status;
 
   EscalaModel({
     required this.id,
     required this.pedidoId,
-    required this.rh_id,
+    required this.rhId,
     required this.dataCriacao,
-    required this.status
-});
-
+    required this.status,
+  });
 }

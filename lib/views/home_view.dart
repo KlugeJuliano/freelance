@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:freelance/models/users.dart';
 import 'package:provider/provider.dart';
 import 'package:freelance/providers/auth_provider.dart';
 import 'package:go_router/go_router.dart';
@@ -11,10 +12,36 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String? _selectedRole;
+  UserModel? _selectedUser;
 
   @override
   Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
+    final fakeUsers = [
+      UserModel(
+        id: '1',
+        name: 'Gerente Loja',
+        email: 'gerente@loja.com',
+        cargo: 'Gerente',
+        lojaId: '1',
+      ),
+      UserModel(
+        id: "2",
+        name: 'RH Central',
+        email: 'rh@empresa.com',
+        cargo: 'Recursos Humanos',
+        lojaId: '0', // RH não pertence a uma loja específica
+      ),
+      UserModel(
+        id: "3",
+        name: 'Diretoria',
+        email: 'diretoria@empresa.com',
+        cargo: 'Diretor',
+        lojaId: "0",
+      ),
+    ];
+
     return Scaffold(
       appBar: AppBar(title: const Text('Home Page')),
       body: SafeArea(
@@ -25,66 +52,55 @@ class _HomePageState extends State<HomePage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text('Selecione o perfil', style: TextStyle(fontFamily: 'ROBOTO', fontSize: 32),),
+                const Text(
+                  'Selecione o perfil',
+                  style: TextStyle(fontFamily: 'ROBOTO', fontSize: 32),
+                ),
                 const SizedBox(height: 20),
-                    
+
                 // Exibe o cargo selecionado
                 Text(
-                  _selectedRole == null
-                      ? 'Nenhum perfil selecionado'
-                      : 'Perfil: $_selectedRole',
+                  _selectedUser?.cargo ?? "Nenhum perfil selecionado",
                   style: const TextStyle(fontSize: 20),
                 ),
                 const SizedBox(height: 10),
-                    
+
                 // PopupMenuButton para selecionar o cargo
-                PopupMenuButton<String>(
-                  onSelected: (value) {
-                    setState(() => _selectedRole = value);
+                PopupMenuButton<UserModel>(
+                  onSelected: (user) {
+                    setState(() => _selectedUser = user);
                   },
-                  itemBuilder: (BuildContext context) => const [
-                    PopupMenuItem(
-                      value: 'gerente',
-                      child: Text('Gerente'),
-                    ),
-                    PopupMenuItem(
-                      value: 'rh',
-                      child: Text('Recursos Humanos'),
-                    ),
-                    PopupMenuItem(
-                      value: 'diretoria',
-                      child: Text('Diretoria'),
-                    ),
-                  ],
+                  itemBuilder: (context) => fakeUsers
+                      .map(
+                        (user) => PopupMenuItem<UserModel>(
+                          value: user,
+                          child: Text(user.name),
+                        ),
+                      )
+                      .toList(),
                   child: const Icon(Icons.arrow_drop_down_circle),
                 ),
-                    
+
                 const SizedBox(height: 30),
-                    
+
                 ElevatedButton(
-                  onPressed: _selectedRole == null
+                  onPressed: _selectedUser == null
                       ? null
                       : () {
-                    // Atualiza o AuthProvider
-                    context.read<AuthProvider>().login(_selectedRole!);
-                    
-                    // Redireciona conforme o cargo
-                    if (_selectedRole == 'gerente') {
-                      context.push('/manager/gerente');
-                    }else if (_selectedRole == 'rh') {
-                      context.push('/rh/fila_pedidos');
-                    } else if (_selectedRole == 'diretoria') {
-                      context.push('/direcao/diretoria');
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Ainda não há tela para "$_selectedRole"',
-                          ),
-                        ),
-                      );
-                    }
-                  },
+                          context.read<AuthProvider>().login(_selectedUser!);
+
+                          switch (_selectedUser!.id) {
+                            case '1':
+                              context.push('/manager/gerente');
+                              break;
+                            case '2':
+                              context.push('/rh/fila_pedidos');
+                              break;
+                            case '3':
+                              context.push('/direcao/diretoria');
+                              break;
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.lightBlueAccent,
                   ),

@@ -1,8 +1,8 @@
-class EscalaFreelanceModel{
+class EscalaFreelanceModel {
   String id;
   String escalaId;
   String freelanceId;
-  String Status;
+  String status;
   DateTime horaEntrada;
   DateTime horaSaida;
   String observacoes;
@@ -11,9 +11,9 @@ class EscalaFreelanceModel{
     required this.id,
     required this.escalaId,
     required this.freelanceId,
-    required this.Status,
+    required this.status,
     required this.horaEntrada,
     required this.horaSaida,
-    required this.observacoes
-});
+    required this.observacoes,
+  });
 }

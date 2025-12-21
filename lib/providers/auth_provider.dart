@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:freelance/models/users.dart';
 
-class AuthProvider extends ChangeNotifier{
-  String _role = "";
+class AuthProvider extends ChangeNotifier {
+  UserModel? _user;
 
-  String get role => _role;
+  UserModel? get user => _user;
 
-  void login(String cargo){
-    _role = cargo;
+  String? get cargo => user?.cargo;
+
+  void login(UserModel cargo) {
+    _user = user;
+
     notifyListeners();
   }
-  void logout(){
-    _role = "";
+
+  void logout() {
+    _user = null;
     notifyListeners();
   }
-
 }
