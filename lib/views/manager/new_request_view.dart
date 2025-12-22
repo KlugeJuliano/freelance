@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:freelance/helpers/datetime_helper.dart';
+import 'package:freelance/models/request.dart';
+import 'package:freelance/providers/auth_provider.dart';
+import 'package:freelance/providers/pedido_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 const List<String> setores = [
   'Reposição',
@@ -20,14 +26,71 @@ const List<String> setores = [
 ];
 
 class NovaSolicitacao extends StatefulWidget {
-  const NovaSolicitacao({super.key});
+  NovaSolicitacao({super.key});
+  DateTime? dataInicio;
+  DateTime? dataFim;
 
   @override
   State<NovaSolicitacao> createState() => _NovaSolicitacaoState();
 }
 
 class _NovaSolicitacaoState extends State<NovaSolicitacao> {
+  final _formKey = GlobalKey<FormState>();
+
   String valuedropDonw = setores[0];
+
+  final TextEditingController quantidadeController = TextEditingController();
+  final TextEditingController observacaoController = TextEditingController();
+  String setorSelecionado = setores[0];
+
+  @override
+  void dispose() {
+    quantidadeController.dispose();
+    observacaoController.dispose();
+    super.dispose();
+  }
+
+  void _submeter() {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (dataInicio == null || dataFim == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione data de início e fim')),
+      );
+      return;
+    }
+
+    final auth = context.read<AuthProvider>();
+    final pedidoProvider = context.read<PedidoProvider>();
+
+    if (auth.user == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Usuário não logado')));
+      return;
+    }
+
+    final novoPedido = PedidoModel(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      lojaId: auth.user!.lojaId,
+      gerenteId: auth.user!.id,
+      dataInicio: dataInicio!,
+      dataFim: dataFim!,
+      funcao: valuedropDonw,
+      quantidade: int.parse(quantidadeController.text),
+      observacoes: observacaoController.text,
+      status: 'pendente',
+      dataCriacao: DateTime.now(),
+    );
+
+    pedidoProvider.adicionarPedido(novoPedido);
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Solicitação enviada ao RH')));
+
+    context.pop();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,67 +118,120 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      // Função
-                    DropdownButton<String>(
-                      hint: Text('Selecione a Função'),
-                      isExpanded: true,
-                      value: valuedropDonw,
-                      items: setores.map<DropdownMenuItem<String>>((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (String? value) {
-                        setState(() {
-                          valuedropDonw = value!;
-                        });
-                      },),
-                      const SizedBox(height: 16),
-
-                      // Quantidade
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Quantidade de Pessoas',
-                          border: OutlineInputBorder(),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        // Função
+                        DropdownButton<String>(
+                          hint: Text('Selecione a Função'),
+                          isExpanded: true,
+                          value: valuedropDonw,
+                          items: setores.map<DropdownMenuItem<String>>((
+                            String value,
+                          ) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                          onChanged: (String? value) {
+                            setState(() {
+                              valuedropDonw = value!;
+                            });
+                          },
                         ),
-                        keyboardType: TextInputType.number,
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      // Data/hora início
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Data/Horário de Início',
-                          border: OutlineInputBorder(),
+                        // Quantidade
+                        TextFormField(
+                          controller: quantidadeController,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Campo obrigatorio";
+                            }
+                            return null;
+                          },
+                          decoration: const InputDecoration(
+                            labelText: 'Quantidade de Pessoas',
+                            border: OutlineInputBorder(),
+                          ),
+                          keyboardType: TextInputType.number,
                         ),
-                      ),
-                      
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 16),
 
-                      // Data/hora fim
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Data/Horário de Término',
-                          border: OutlineInputBorder(),
+                        // Data/hora início
+                        TextFormField(
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Data/Horario de inicio',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (_) =>
+                              dataInicio == null ? 'Campo obrigatório' : null,
+                          onTap: () async {
+                            final result = await selecionarDataHora(context);
+                            if (result != null) {
+                              setState(() {
+                                dataInicio = result;
+                              });
+                            }
+                          },
+                          controller: TextEditingController(
+                            text: dataInicio == null
+                                ? ''
+                                : DateFormat('dd/MM/yyyy').format(dataInicio!),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
 
-                      // Observações
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: 'Observações',
-                          border: OutlineInputBorder(),
+                        const SizedBox(height: 16),
+
+                        // Data/hora fim
+                        TextFormField(
+                          readOnly: true,
+                          decoration: const InputDecoration(
+                            labelText: 'Data/Hora fim',
+                            border: OutlineInputBorder(),
+                          ),
+                          validator: (_) =>
+                              dataFim == null ? 'Campo obrigatório' : null,
+                          onTap: () async {
+                            final result = await selecionarDataHora(context);
+                            if (result != null) {
+                              setState(() {
+                                dataFim = result;
+                              });
+                            }
+                          },
+                          controller: TextEditingController(
+                            text: dataFim == null
+                                ? ''
+                                : DateFormat('dd/MM/yyyy').format(dataFim!),
+                          ),
                         ),
-                        maxLines: 3,
-                      ),
-                    ],
+                        const SizedBox(height: 16),
+
+                        // Observações
+                        TextFormField(
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return "Campo obrigatorio";
+                            }
+                            return null;
+                          },
+                          controller: observacaoController,
+                          decoration: const InputDecoration(
+                            labelText: 'Observações',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -138,11 +254,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                     ),
                   ),
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Solicitação enviada ao RH.')),
-                    );
-                    context.pop(); // volta à tela anterior
+                    _submeter();
                   },
                 ),
               ),

@@ -28,11 +28,11 @@ final GoRouter _router = GoRouter(
     GoRoute(path: '/', builder: (context, state) => const HomePage()),
     GoRoute(
       path: '/manager/gerente',
-      builder: (context, state) => const GerenteView(),
+      builder: (context, state) => GerenteView(),
     ),
     GoRoute(
       path: '/manager/new_request',
-      builder: (context, state) => const NovaSolicitacao(),
+      builder: (context, state) => NovaSolicitacao(),
     ),
     GoRoute(
       path: '/manager/jornada_view',

@@ -8,7 +8,7 @@ class AuthProvider extends ChangeNotifier {
 
   String? get cargo => user?.cargo;
 
-  void login(UserModel cargo) {
+  void login(UserModel user) {
     _user = user;
 
     notifyListeners();

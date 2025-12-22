@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:freelance/models/request.dart';
+import 'package:freelance/providers/pedido_provider.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class GerenteView extends StatelessWidget {
   const GerenteView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final pedidoProvider = context.watch<PedidoProvider>().pedidos;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -19,12 +23,17 @@ class GerenteView extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView.builder(
-          itemBuilder: (context, itens) {
+          itemCount: pedidoProvider.length,
+          itemBuilder: (context, index) {
+            final pedido = pedidoProvider[index];
             return Card(
               child: ListTile(
-                title: Text('Solicitação para 25/12/2025 ${itens + 1}'),
-                subtitle: const Text(
-                  'Solicitação de 5 pessoas para o setor de Reposição.',
+                title: Text(
+                  'Solicitação para ${pedido.dataInicio.day}/${pedido.dataInicio.month}/${pedido.dataInicio.year}',
+                ),
+
+                subtitle: Text(
+                  'Solicitação de ${pedido.quantidade} pessoas para o setor de ${pedido.funcao}.',
                 ),
                 onTap: () {
                   context.push('/manager/jornada_view');
@@ -32,7 +41,7 @@ class GerenteView extends StatelessWidget {
                 trailing: ElevatedButton(
                   onPressed: () {},
 
-                  child: Text("aprover"),
+                  child: Text("Aprovar"),
                 ),
               ),
             );
