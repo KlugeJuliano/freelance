@@ -35,8 +35,11 @@ final GoRouter _router = GoRouter(
       builder: (context, state) => NovaSolicitacao(),
     ),
     GoRoute(
-      path: '/manager/jornada_view',
-      builder: (context, state) => const JornadaView(),
+      path: '/manager/jornada_view/:pedidoId',
+      builder: (context, state) {
+        final pedidoId = state.pathParameters['pedidoId']!;
+        return DetalhesPedido(pedidoId: pedidoId);
+      },
     ),
     GoRoute(
       path: '/rh/fila_pedidos',

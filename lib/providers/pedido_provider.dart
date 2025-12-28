@@ -11,4 +11,8 @@ class PedidoProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  buscarPorId(String id) {
+    return pedidos.firstWhere((pedido) => pedido.id == id);
+  }
 }

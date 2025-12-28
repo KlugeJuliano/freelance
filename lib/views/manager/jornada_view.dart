@@ -1,56 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:freelance/providers/pedido_provider.dart';
+import 'package:provider/provider.dart';
 
-class JornadaView extends StatefulWidget {
-  const JornadaView({super.key});
+class DetalhesPedido extends StatelessWidget {
+  final String pedidoId;
 
-  @override
-  State<JornadaView> createState() => _JornadaViewState();
-}
+  DetalhesPedido({super.key, required this.pedidoId});
 
-class _JornadaViewState extends State<JornadaView> {
   @override
   Widget build(BuildContext context) {
-    return  Scaffold(
-      appBar: AppBar(
-        title: const Text('Jornada View'),
+    final pedido = context.watch<PedidoProvider>().buscarPorId(pedidoId);
+    return Scaffold(
+      appBar: AppBar(centerTitle: true, title: Text('Detalhes do pedido')),
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.grey[200],
+        child: Row(
+          children: [
+            ElevatedButton(onPressed: () {}, child: Text('Cancelar')),
+            ElevatedButton(onPressed: () {}, child: Text('Finalizar')),
+          ],
+        ),
       ),
-      body:  
-      Padding(padding: EdgeInsets.all(  16.0), child:
-       Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Detalhes da Jornada', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),),
-          SizedBox(height: 24,),
-          Text('Aqui estarão os detalhes da jornada selecionada.'),
-          SizedBox(height: 16,),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: DataTable(
-              columns: const [
-                DataColumn(label: Text('Nome')),
-                DataColumn(label: Text('Função')),
-                DataColumn(label: Text('Início')),
-                DataColumn(label: Text('Término')),
-              ],
-              rows: const [
-                DataRow(cells: [
-                  DataCell(Text('João Silva')),
-                  DataCell(Text('Repositor')),
-                  DataCell(Text('08:00')),
-                  DataCell(Text('16:00')),
-                ]),
-                DataRow(cells: [
-                  DataCell(Text('Maria Souza')),
-                  DataCell(Text('Caixa')),
-                  DataCell(Text('09:00')),
-                  DataCell(Text('17:00')),
-                ]),
-                // Adicione mais linhas conforme necessário
-              ],
-            ),
+      body: Padding(
+        padding: EdgeInsets.all(8),
+        child: Card(
+          child: Column(
+            children: [
+              Text(
+                'Pedido id: ${pedido.id} para ${pedido.dataInicio} status: ${pedido.status}',
+              ),
+              const SizedBox(height: 4),
+              Text('Relação das pessoas selecionadas:'),
+              const SizedBox(height: 4),
+              SingleChildScrollView(
+                child: Table(
+                  children: [
+                    TableRow(children: [Text('Nome'), Text('Data')]),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
-      )
+        ),
       ),
     );
   }
