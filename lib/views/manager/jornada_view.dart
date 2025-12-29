@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 class DetalhesPedido extends StatelessWidget {
   final String pedidoId;
 
-  DetalhesPedido({super.key, required this.pedidoId});
+  const DetalhesPedido({super.key, required this.pedidoId});
 
   @override
   Widget build(BuildContext context) {
@@ -33,9 +33,18 @@ class DetalhesPedido extends StatelessWidget {
               Text('Relação das pessoas selecionadas:'),
               const SizedBox(height: 4),
               SingleChildScrollView(
-                child: Table(
-                  children: [
-                    TableRow(children: [Text('Nome'), Text('Data')]),
+                child: DataTable(
+                  columns: [
+                    DataColumn(label: Expanded(child: Text('Nome'))),
+                    DataColumn(label: Expanded(child: Text('Função'))),
+                  ],
+                  rows: [
+                    DataRow(
+                      cells: [
+                        DataCell(Text(pedido.nome)),
+                        DataCell(Text(pedido.funcao)),
+                      ],
+                    ),
                   ],
                 ),
               ),
