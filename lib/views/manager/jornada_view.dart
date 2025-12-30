@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/providers/pedido_provider.dart';
+import 'package:freelance/providers/pessoa_provider.dart';
 import 'package:provider/provider.dart';
 
 class DetalhesPedido extends StatelessWidget {
@@ -9,7 +10,12 @@ class DetalhesPedido extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pedido = context.watch<PedidoProvider>().buscarPorId(pedidoId);
+    final pedidoProvider = context.watch<PedidoProvider>();
+    final pessoaProvider = context.watch<PessoaProvider>();
+
+    final pedido = pedidoProvider.buscarPorId(pedidoId);
+    final pessoasNoPedido = pedido.pessoas;
+
     return Scaffold(
       appBar: AppBar(centerTitle: true, title: Text('Detalhes do pedido')),
       bottomNavigationBar: BottomAppBar(
@@ -38,14 +44,17 @@ class DetalhesPedido extends StatelessWidget {
                     DataColumn(label: Expanded(child: Text('Nome'))),
                     DataColumn(label: Expanded(child: Text('Função'))),
                   ],
-                  rows: [
-                    DataRow(
-                      cells: [
-                        DataCell(Text(pedido.nome)),
-                        DataCell(Text(pedido.funcao)),
-                      ],
-                    ),
-                  ],
+                  rows:
+                      pessoasNoPedido.map((pessoasNoPedido) {
+                        final pessoa = pessoaProvider.buscarPessoaPorId(
+                          pessoasNoPedido.pessoaId,
+                        );
+                      })[DataRow(
+                        cells: [
+                          DataCell(Text(pessoasNoPedido.nome)),
+                          DataCell(Text(pessoasNoPedido.funcao)),
+                        ],
+                      )],
                 ),
               ),
             ],

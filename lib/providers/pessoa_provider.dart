@@ -6,8 +6,8 @@ class PessoaProvider extends ChangeNotifier {
 
   List<PessoaModel> get pessoas => _pessoas;
 
-  adicionarPessoa(PessoaModel pessoas) {
-    _pessoas.add(pessoas);
+  adicionarPessoa(PessoaModel pessoa) {
+    _pessoas.add(pessoa);
     notifyListeners();
   }
 
@@ -25,5 +25,10 @@ class PessoaProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  alterarPessoa(String id) {}
+  alterarPessoa(String id, String novoNome) {
+    final pessoa = _pessoas.firstWhere((p) => p.pessoaId == id);
+    pessoa.nome = novoNome;
+
+    notifyListeners();
+  }
 }

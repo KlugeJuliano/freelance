@@ -1,4 +1,6 @@
-class PedidoModel{
+import 'package:freelance/models/pessoa_no_pedido.dart';
+
+class PedidoModel {
   String id;
   String lojaId;
   String gerenteId;
@@ -9,6 +11,7 @@ class PedidoModel{
   String observacoes;
   String status;
   DateTime dataCriacao;
+  List<PessoaNoPedidoModel> pessoas;
 
   PedidoModel({
     required this.id,
@@ -20,7 +23,7 @@ class PedidoModel{
     required this.quantidade,
     required this.observacoes,
     required this.status,
-    required this.dataCriacao
-});
-
+    required this.dataCriacao,
+    List<PessoaNoPedidoModel>? pessoas,
+  }) : pessoas = pessoas ?? [];
 }
