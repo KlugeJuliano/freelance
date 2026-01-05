@@ -1,5 +1,3 @@
-// ignore_for_file: unused_local_variable
-
 import 'package:flutter/material.dart';
 import 'package:freelance/models/pessoa_no_pedido.dart';
 import 'package:freelance/models/request.dart';
@@ -42,13 +40,12 @@ class PedidoProvider extends ChangeNotifier {
   }) {
     final pedido = buscarPorId(pedidoId);
 
-    return pedido.pessoas.map<PessoaNoPedidoViewModel>((alocacao) {
-      final pessoa = pessoaProvider.buscarPessoaPorId(alocacao.pedidoId);
-
+    return pedido.pessoas.map((alocacao) {
+      final pessoa = pessoaProvider.buscarPessoaPorId(alocacao.pessoaId);
       return PessoaNoPedidoViewModel(
+        funcao: alocacao.funcao,
         pessoaId: alocacao.pessoaId,
         nome: alocacao.nome,
-        funcao: alocacao.funcao,
       );
     }).toList();
   }
