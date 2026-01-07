@@ -35,7 +35,7 @@ class GerenteView extends StatelessWidget {
                   'Solicitação de ${pedido.quantidade} pessoas para o setor de ${pedido.funcao}.',
                 ),
                 onTap: () {
-                  context.go('/manager/jornada_view/${pedido.id}');
+                  context.push('/manager/jornada_view/${pedido.id}');
                 },
                 trailing: ElevatedButton(
                   onPressed: () {},

@@ -1,5 +1,5 @@
 import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common/sqflite.dart';
+//import 'package:sqflite_common/sqflite.dart';
 
 class ConfigDatabase {
   static Future<Database> getDatabase() async {
@@ -26,5 +26,3 @@ class ConfigDatabase {
     );
   }
 }
-
-

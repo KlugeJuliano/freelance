@@ -1,23 +1,23 @@
 import 'package:flutter/material.dart';
 
-DateTime? dataInicio;
-DateTime? dataFim;
-
-Future<DateTime?> selecionarDataHora(BuildContext context) async {
-  final data = await showDatePicker(
+Future<DateTime?> selecionarDataHora({
+  required BuildContext context,
+  DateTime? initialDate,
+}) async {
+  final date = await showDatePicker(
     context: context,
+    initialDate: initialDate ?? DateTime.now(),
     firstDate: DateTime.now(),
     lastDate: DateTime(2030),
   );
+  if (date == null) return null;
 
-  if (data == null) return null;
-
-  final hora = await showTimePicker(
+  final time = await showTimePicker(
     context: context,
-    initialTime: TimeOfDay.now(),
+    initialTime: TimeOfDay.fromDateTime(initialDate ?? DateTime.now()),
   );
 
-  if (hora == null) return null;
+  if (time == null) return null;
 
-  return DateTime(data.year, data.month, data.day, hora.hour, hora.minute);
+  return DateTime(date.year, date.month, date.day, time.hour, time.minute);
 }

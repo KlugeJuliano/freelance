@@ -26,9 +26,7 @@ const List<String> setores = [
 ];
 
 class NovaSolicitacao extends StatefulWidget {
-  NovaSolicitacao({super.key});
-  DateTime? dataInicio;
-  DateTime? dataFim;
+  const NovaSolicitacao({super.key});
 
   @override
   State<NovaSolicitacao> createState() => _NovaSolicitacaoState();
@@ -36,6 +34,9 @@ class NovaSolicitacao extends StatefulWidget {
 
 class _NovaSolicitacaoState extends State<NovaSolicitacao> {
   final _formKey = GlobalKey<FormState>();
+
+  DateTime? dataInicio;
+  DateTime? dataFim;
 
   String valuedropDonw = setores[0];
 
@@ -174,7 +175,10 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                           validator: (_) =>
                               dataInicio == null ? 'Campo obrigatório' : null,
                           onTap: () async {
-                            final result = await selecionarDataHora(context);
+                            final result = await selecionarDataHora(
+                              context: context,
+                              initialDate: dataInicio,
+                            );
                             if (result != null) {
                               setState(() {
                                 dataInicio = result;
@@ -200,7 +204,10 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                           validator: (_) =>
                               dataFim == null ? 'Campo obrigatório' : null,
                           onTap: () async {
-                            final result = await selecionarDataHora(context);
+                            final result = await selecionarDataHora(
+                              context: context,
+                              initialDate: dataFim,
+                            );
                             if (result != null) {
                               setState(() {
                                 dataFim = result;

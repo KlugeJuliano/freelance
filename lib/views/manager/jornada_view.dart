@@ -14,13 +14,14 @@ class DetalhesPedido extends StatelessWidget {
     final pessoaProvider = context.watch<PessoaProvider>();
 
     final pedido = pedidoProvider.buscarPorId(pedidoId);
-    final pessoasAlocadas = pedidoProvider.getPessoasAlocadasViewModel(
-      pedidoId: pedidoId,
-      pessoaProvider: pessoaProvider,
-    );
+    final pessoasNoPedido = pedido.pessoas;
 
     return Scaffold(
-      appBar: AppBar(centerTitle: true, title: Text('Detalhes do pedido')),
+      appBar: AppBar(
+        centerTitle: true,
+        title: Text('Detalhes do pedido'),
+        leading: BackButton(),
+      ),
       bottomNavigationBar: BottomAppBar(
         color: Colors.grey[200],
         child: Row(
@@ -47,16 +48,18 @@ class DetalhesPedido extends StatelessWidget {
                     DataColumn(label: Expanded(child: Text('Nome'))),
                     DataColumn(label: Expanded(child: Text('Função'))),
                   ],
-                  rows: pessoasAlocadas
-                      .map(
-                        (vm) => DataRow(
-                          cells: [
-                            DataCell(Text(vm.nome)),
-                            DataCell(Text(vm.funcao)),
-                          ],
-                        ),
-                      )
-                      .toList(),
+                  rows: pessoasNoPedido.map<DataRow>((pessoaNoPedido) {
+                    final pessoa = pessoaProvider.buscarPessoaPorId(
+                      pessoaNoPedido.pessoaId,
+                    );
+
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(pessoa.nome)),
+                        DataCell(Text(pessoaNoPedido.funcao)),
+                      ],
+                    );
+                  }).toList(),
                 ),
               ),
             ],
