@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class EscalacaoView extends StatefulWidget {
-  const EscalacaoView({super.key});
+  const EscalacaoView({super.key, required String pedidoId});
 
   @override
   State<EscalacaoView> createState() => _EscalacaoViewState();

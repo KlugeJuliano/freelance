@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:freelance/providers/pedido_provider.dart';
+import 'package:freelance/services/status_service.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 class FilaPedidosView extends StatefulWidget {
   const FilaPedidosView({super.key});
@@ -11,93 +14,45 @@ class FilaPedidosView extends StatefulWidget {
 class _FilaPedidosViewState extends State<FilaPedidosView> {
   @override
   Widget build(BuildContext context) {
+    final pedidoProvider = context.watch<PedidoProvider>();
+
+    final pedidosPendentes = pedidoProvider.pedidos
+        .where((p) => p.status == 'solicitado')
+        .toList();
+
     return Scaffold(
-      appBar: AppBar(title: Text('Fila de pedidos'),
-      centerTitle: true,),
-      body: SingleChildScrollView(
-        child: Center(
-          child: Column(
-            children: [
-              Card(
-              margin: EdgeInsets.all(16.0),
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Solicitação #12345', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8.0),
-                    Text('Loja: Loja Central'),
-                    Text('Gerente: João Silva'),
-                    Text('Data: 25/06/2024'),
-                    Text('Pessoas solicitadas: 3'),
-                    Text('Status: Em andamento'),
-                    SizedBox(height: 16.0),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Ação ao pressionar o botão
-                        context.push('/rh/escala_pedidos');
-                      },
-                      child: Text('Ver detalhes do pedido'),
+      appBar: AppBar(title: Text('Fila de pedidos'), centerTitle: true),
+      body: pedidosPendentes.isEmpty
+          ? const Center(child: Text("Nenhum pedido ainda"))
+          : ListView.builder(
+              itemCount: pedidosPendentes.length,
+              itemBuilder: (context, index) {
+                final pedido = pedidosPendentes[index];
+
+                return Card(
+                  margin: const EdgeInsets.all(12),
+                  child: ListTile(
+                    title: Text(
+                      'Pedido ${pedido.id}',
+                      style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                  ],
-                ),
-              ),
-             ),
-              Card(
-                margin: EdgeInsets.all(16.0),
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Solicitação #12346', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 8.0),
-                      Text('Loja: Loja Norte'),
-                      Text('Gerente: Maria Oliveira'),
-                      Text('Data: 26/06/2024'),
-                      Text('Pessoas solicitadas: 2'),
-                      Text('Status: Pendente'),
-                      SizedBox(height: 16.0),
-                      ElevatedButton(
-                        onPressed: () {
-                          // Ação ao pressionar o botão
-                        },
-                        child: Text('Ver detalhes do pedido'),
-                      ),
-                    ],
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Função: ${pedido.funcao}'),
+                        Text('Quantidade: ${pedido.quantidade}'),
+                        Text(
+                          'Periodo: ${pedido.dataInicio} até ${pedido.dataFim}',
+                        ),
+                        Text('Status: ${pedido.status}'),
+                      ],
+                    ),
+                    trailing: const Icon(Icons.arrow_forward),
+                    onTap: () => context.push('rh/escala_pedidos/${pedido.id}'),
                   ),
-                ),
-              ),
-              Card(
-                margin: EdgeInsets.all(16.0),
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Solicitação #12347', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 8.0),
-                      Text('Loja: Loja Sul'),
-                      Text('Gerente: Carlos Pereira'),
-                      Text('Data: 27/06/2024'),
-                      Text('Pessoas solicitadas: 4'),
-                      Text('Status: Aprovado'),
-                      SizedBox(height: 16.0),
-                      ElevatedButton(
-                        onPressed: () {
-                          // Ação ao pressionar o botão
-                        },
-                        child: Text('Ver detalhes do pedido'),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-            ],
-          ),
-        ),
-      )
+                );
+              },
+            ),
     );
   }
 }

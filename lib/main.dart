@@ -45,11 +45,14 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/rh/fila_pedidos',
-      builder: (context, state) => const FilaPedidosView(),
+      builder: (context, state) => FilaPedidosView(),
     ),
     GoRoute(
-      path: '/rh/escala_pedidos',
-      builder: (context, state) => const EscalacaoView(),
+      path: '/rh/escala_pedidos/:pedidoId',
+      builder: (context, state) {
+        final pedidoId = state.pathParameters['pedidoId']!;
+        return EscalacaoView(pedidoId: pedidoId);
+      },
     ),
     GoRoute(
       path: '/direcao/diretoria',

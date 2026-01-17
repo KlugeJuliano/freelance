@@ -3,6 +3,7 @@ import 'package:freelance/helpers/datetime_helper.dart';
 import 'package:freelance/models/request.dart';
 import 'package:freelance/providers/auth_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
+import 'package:freelance/services/status_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -80,7 +81,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
       funcao: valuedropDonw,
       quantidade: int.parse(quantidadeController.text),
       observacoes: observacaoController.text,
-      status: 'pendente',
+      status: StatusPedido.solicitado.name,
       dataCriacao: DateTime.now(),
     );
 
