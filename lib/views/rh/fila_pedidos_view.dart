@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/providers/pedido_provider.dart';
-import 'package:freelance/services/status_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -48,7 +47,8 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
                       ],
                     ),
                     trailing: const Icon(Icons.arrow_forward),
-                    onTap: () => context.push('rh/escala_pedidos/${pedido.id}'),
+                    onTap: () =>
+                        context.push('/rh/escala_pedidos/${pedido.id}'),
                   ),
                 );
               },

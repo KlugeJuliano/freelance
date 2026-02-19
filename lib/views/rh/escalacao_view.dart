@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:freelance/providers/pedido_provider.dart';
+import 'package:provider/provider.dart';
 
 class EscalacaoView extends StatefulWidget {
-  const EscalacaoView({super.key, required String pedidoId});
+  final String pedidoId;
+  const EscalacaoView({super.key, required this.pedidoId});
 
   @override
   State<EscalacaoView> createState() => _EscalacaoViewState();
@@ -10,6 +13,8 @@ class EscalacaoView extends StatefulWidget {
 class _EscalacaoViewState extends State<EscalacaoView> {
   @override
   Widget build(BuildContext context) {
+    final pedidoProvider = context.watch<PedidoProvider>();
+    final pedido = pedidoProvider.buscarPorId(widget.pedidoId);
     return Scaffold(
       appBar: AppBar(title: Text('Escalação de pedidos'), centerTitle: true),
       body: Padding(
