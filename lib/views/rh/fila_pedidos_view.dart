@@ -19,8 +19,41 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
         .where((p) => p.status == 'solicitado')
         .toList();
 
+    Widget _buildDrawer(BuildContext context) {
+      return Drawer(
+        child: ListView(
+          children: [
+            const DrawerHeader(
+              decoration: BoxDecoration(color: Colors.blue),
+              child: Text(
+                'Menu RH',
+                style: TextStyle(color: Colors.white, fontSize: 20),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.work),
+              title: const Text('Cadastro de Funções'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/rh/cadastros/cadastro_funcoes');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Cadastro de Colaboradores'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/rh/cadastros/cadastro_colaboradores');
+              },
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text('Fila de pedidos'), centerTitle: true),
+      drawer: _buildDrawer(context),
       body: pedidosPendentes.isEmpty
           ? const Center(child: Text("Nenhum pedido ainda"))
           : ListView.builder(

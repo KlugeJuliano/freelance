@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/providers/auth_provider.dart';
+import 'package:freelance/providers/funcao_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
+import 'package:freelance/providers/pessoa_funcao_provider.dart';
 import 'package:freelance/providers/pessoa_provider.dart';
 import 'package:freelance/views/direcao/relatorios_consolidados_view.dart';
 import 'package:freelance/views/home_view.dart';
 import 'package:freelance/views/manager/jornada_view.dart';
 import 'package:freelance/views/manager/new_request_view.dart';
 import 'package:freelance/views/manager/requests_view.dart';
+import 'package:freelance/views/rh/cadastros/colaboradores_view.dart';
+import 'package:freelance/views/rh/cadastros/funcoes_view.dart';
 import 'package:freelance/views/rh/escalacao_view.dart';
 import 'package:freelance/views/rh/fila_pedidos_view.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +23,8 @@ void main() {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => PedidoProvider()),
         ChangeNotifierProvider(create: (_) => PessoaProvider()),
+        ChangeNotifierProvider(create: (_) => FuncaoProvider()),
+        ChangeNotifierProvider(create: (_) => PessoaFuncaoProvider()),
       ],
       child: const MyApp(),
     ),
@@ -57,6 +63,15 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/direcao/diretoria',
       builder: (context, state) => const RelatoriosConsolidadosView(),
+    ),
+    GoRoute(
+      path: '/rh/cadastros/cadastro_funcoes',
+      builder: (context, state) => const CadastroFuncoes(),
+    ),
+
+    GoRoute(
+      path: '/rh/cadastros/cadastro_colaboradores',
+      builder: (context, state) => const CadastroColaboradores(),
     ),
   ],
 );
