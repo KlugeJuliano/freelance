@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/models/pessoa_no_pedido.dart';
-import 'package:freelance/models/request.dart';
+import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/providers/pessoa_provider.dart';
 import 'package:freelance/viewmodels/pessoa_no_pedido_viewmodel.dart';
 

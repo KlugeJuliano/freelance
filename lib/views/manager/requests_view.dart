@@ -32,7 +32,7 @@ class GerenteView extends StatelessWidget {
                 ),
 
                 subtitle: Text(
-                  'Solicitação de ${pedido.quantidade} pessoas para o setor de ${pedido.funcao}.',
+                  'Solicitação de ${pedido.quantidade} pessoas para o setor de ${pedido.funcaoId}.',
                 ),
                 onTap: () {
                   context.push('/manager/jornada_view/${pedido.id}');

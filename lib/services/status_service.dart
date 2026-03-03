@@ -1,4 +1,4 @@
-import 'package:freelance/models/request.dart';
+import 'package:freelance/models/pedido_model.dart';
 
 enum StatusPedido { solicitado, aprovado, cancelado, recusado, finalizado }
 

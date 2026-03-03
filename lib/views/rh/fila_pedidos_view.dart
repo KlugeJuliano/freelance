@@ -19,7 +19,7 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
         .where((p) => p.status == 'solicitado')
         .toList();
 
-    Widget _buildDrawer(BuildContext context) {
+    Widget buildDrawer(BuildContext context) {
       return Drawer(
         child: ListView(
           children: [
@@ -46,6 +46,14 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
                 context.push('/rh/cadastros/cadastro_colaboradores');
               },
             ),
+            ListTile(
+              leading: const Icon(Icons.people),
+              title: const Text('Sair'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/');
+              },
+            ),
           ],
         ),
       );
@@ -53,7 +61,7 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
 
     return Scaffold(
       appBar: AppBar(title: Text('Fila de pedidos'), centerTitle: true),
-      drawer: _buildDrawer(context),
+      drawer: buildDrawer(context),
       body: pedidosPendentes.isEmpty
           ? const Center(child: Text("Nenhum pedido ainda"))
           : ListView.builder(
@@ -71,7 +79,7 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Função: ${pedido.funcao}'),
+                        Text('Função: ${pedido.funcaoId}'),
                         Text('Quantidade: ${pedido.quantidade}'),
                         Text(
                           'Periodo: ${pedido.dataInicio} até ${pedido.dataFim}',

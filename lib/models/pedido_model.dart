@@ -6,7 +6,7 @@ class PedidoModel {
   String gerenteId;
   DateTime dataInicio;
   DateTime dataFim;
-  String funcao;
+  String funcaoId;
   int quantidade;
   String observacoes;
   String status;
@@ -19,7 +19,7 @@ class PedidoModel {
     required this.gerenteId,
     required this.dataInicio,
     required this.dataFim,
-    required this.funcao,
+    required this.funcaoId,
     required this.quantidade,
     required this.observacoes,
     required this.status,

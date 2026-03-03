@@ -1,30 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/helpers/datetime_helper.dart';
-import 'package:freelance/models/request.dart';
+import 'package:freelance/models/funcao_model.dart';
+import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/providers/auth_provider.dart';
+import 'package:freelance/providers/funcao_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
 import 'package:freelance/services/status_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-
-const List<String> setores = [
-  'Reposição',
-  'Limpeza',
-  'Açougue',
-  'Segurança',
-  'Cozinha',
-  'Frios',
-  'Operador de Caixa',
-  'Fiscal de Loja',
-  'Fiscal de caixa',
-  'Motorista',
-  'Estoquista',
-  'Ajudante de Carga e Descarga',
-  'CPD',
-  'Padaria',
-  'Salgados',
-];
 
 class NovaSolicitacao extends StatefulWidget {
   const NovaSolicitacao({super.key});
@@ -36,14 +20,13 @@ class NovaSolicitacao extends StatefulWidget {
 class _NovaSolicitacaoState extends State<NovaSolicitacao> {
   final _formKey = GlobalKey<FormState>();
 
+  String? _funcaoSelecionada;
+
   DateTime? dataInicio;
   DateTime? dataFim;
 
-  String valuedropDonw = setores[0];
-
   final TextEditingController quantidadeController = TextEditingController();
   final TextEditingController observacaoController = TextEditingController();
-  String setorSelecionado = setores[0];
 
   @override
   void dispose() {
@@ -78,7 +61,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
       gerenteId: auth.user!.id,
       dataInicio: dataInicio!,
       dataFim: dataFim!,
-      funcao: valuedropDonw,
+      funcaoId: _funcaoSelecionada!,
       quantidade: int.parse(quantidadeController.text),
       observacoes: observacaoController.text,
       status: StatusPedido.solicitado.name,
@@ -96,6 +79,9 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
 
   @override
   Widget build(BuildContext context) {
+    final funcaoProvider = context.read<FuncaoProvider>();
+    final funcoes = funcaoProvider.funcoes;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Nova Solicitação'),
@@ -129,23 +115,32 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                     child: Column(
                       children: [
                         // Função
-                        DropdownButton<String>(
-                          hint: Text('Selecione a Função'),
-                          isExpanded: true,
-                          value: valuedropDonw,
-                          items: setores.map<DropdownMenuItem<String>>((
-                            String value,
-                          ) {
+                        DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Função',
+                            border: OutlineInputBorder(),
+                          ),
+                          value: _funcaoSelecionada,
+                          hint: Text(
+                            funcoes.isEmpty
+                                ? 'Nenhuma função cadastrada'
+                                : 'Selecione a função',
+                          ),
+                          items: funcoes.map((funcao) {
                             return DropdownMenuItem<String>(
-                              value: value,
-                              child: Text(value),
+                              value: funcao.funcaoId,
+                              child: Text(funcao.nomeFuncao),
                             );
                           }).toList(),
-                          onChanged: (String? value) {
-                            setState(() {
-                              valuedropDonw = value!;
-                            });
-                          },
+                          onChanged: funcoes.isEmpty
+                              ? null
+                              : (value) {
+                                  setState(() {
+                                    _funcaoSelecionada = value;
+                                  });
+                                },
+                          validator: (value) =>
+                              value == null ? 'Selecione uma função' : null,
                         ),
                         const SizedBox(height: 16),
 
