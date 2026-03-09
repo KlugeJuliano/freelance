@@ -26,4 +26,22 @@ class PedidoModel {
     required this.dataCriacao,
     List<PessoaNoPedidoModel>? pessoas,
   }) : pessoas = pessoas ?? [];
+
+  factory PedidoModel.fromJson(Map<String, dynamic> json) {
+    return PedidoModel(
+      id: json['id'],
+      lojaId: json['loja_id'],
+      gerenteId: json['gerente_id'],
+      dataInicio: DateTime.parse(json['data_inicio']),
+      dataFim: DateTime.parse(json['data_fim']),
+      funcaoId: json['funcao_id'],
+      quantidade: json['quantidade'],
+      observacoes: json['observacoes'] ?? '',
+      status: json['status'],
+      dataCriacao: DateTime.parse(json['created_at']),
+      pessoas: (json['freelancers'] as List?)
+          ?.map((f) => PessoaNoPedidoModel.fromJson(f))
+          .toList(),
+    );
+  }
 }

@@ -1,21 +1,49 @@
-import 'package:flutter/material.dart';
-import 'package:freelance/models/users.dart';
+import 'package:flutter/foundation.dart';
+import 'package:freelance/services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
-  UserModel? _user;
+  Map<String, dynamic>? _user;
+  bool _loading = false;
+  String? _erro;
 
-  UserModel? get user => _user;
+  Map<String, dynamic>? get user => _user;
+  bool get loading => _loading;
+  String? get erro => _erro;
+  bool get isLogado => _user != null;
 
-  String? get cargo => user?.cargo;
-
-  void login(UserModel user) {
-    _user = user;
-
-    notifyListeners();
+  Future<void> verificarLogin() async {
+    final logado = await AuthService.isLogado();
+    if (logado) {
+      _user = await AuthService.getUsuarioLogado();
+      notifyListeners();
+    }
   }
 
-  void logout() {
+  Future<bool> login(String email, String password) async {
+    _loading = true;
+    _erro = null;
+    notifyListeners();
+
+    try {
+      _user = await AuthService.login(email, password);
+      _loading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _erro = e.toString().replaceFirst('Exception: ', '');
+      _loading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<void> logout() async {
+    await AuthService.logout();
     _user = null;
     notifyListeners();
   }
+
+  String? get role => _user?['role'] as String?;
+  String? get nome => _user?['nome'] as String?;
+  String? get userId => _user?['id'] as String?;
 }

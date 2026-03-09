@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/helpers/datetime_helper.dart';
-import 'package:freelance/models/funcao_model.dart';
 import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/providers/auth_provider.dart';
 import 'package:freelance/providers/funcao_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
-import 'package:freelance/services/status_service.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -45,8 +43,14 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
       return;
     }
 
+    if (_funcaoSelecionada == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selecione uma função')));
+      return;
+    }
+
     final auth = context.read<AuthProvider>();
-    final pedidoProvider = context.read<PedidoProvider>();
 
     if (auth.user == null) {
       ScaffoldMessenger.of(
@@ -57,18 +61,18 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
 
     final novoPedido = PedidoModel(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      lojaId: auth.user!.lojaId,
-      gerenteId: auth.user!.id,
+      lojaId: auth.user!['loja_id'] ?? '',
+      gerenteId: auth.user!['id'] ?? '',
       dataInicio: dataInicio!,
       dataFim: dataFim!,
       funcaoId: _funcaoSelecionada!,
       quantidade: int.parse(quantidadeController.text),
       observacoes: observacaoController.text,
-      status: StatusPedido.solicitado.name,
+      status: 'solicitado',
       dataCriacao: DateTime.now(),
     );
 
-    pedidoProvider.adicionarPedido(novoPedido);
+    context.read<PedidoProvider>().adicionarPedido(novoPedido);
 
     ScaffoldMessenger.of(
       context,
@@ -120,7 +124,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                             labelText: 'Função',
                             border: OutlineInputBorder(),
                           ),
-                          value: _funcaoSelecionada,
+                          initialValue: _funcaoSelecionada,
                           hint: Text(
                             funcoes.isEmpty
                                 ? 'Nenhuma função cadastrada'
