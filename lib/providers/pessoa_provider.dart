@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:freelance/models/pessoa_model.dart';
 import 'package:freelance/services/api_services.dart';
@@ -20,6 +21,7 @@ class PessoaProvider extends ChangeNotifier {
       final response = await ApiService.dio.get('/freelancers');
       _pessoas = (response.data as List)
           .map((json) => PessoaModel.fromJson(json))
+          .where((p) => p.ativo == true) // <-- só ativos
           .toList();
     } catch (e) {
       _erro = 'Erro ao carregar freelancers: $e';
@@ -44,19 +46,27 @@ class PessoaProvider extends ChangeNotifier {
       );
       _pessoas.add(PessoaModel.fromJson(response.data));
       notifyListeners();
-    } catch (e) {
-      _erro = 'Erro ao adicionar freelancer: $e';
+    } on DioException catch (e) {
+      print('=== ERRO adicionarPessoa ===');
+      print('Body: ${e.response?.data}'); // <-- adicionar
+      _erro = e.response?.data['message'] ?? 'Erro ao adicionar freelancer';
       notifyListeners();
     }
   }
 
   Future<void> removerPessoa(String id) async {
     try {
-      await ApiService.dio.delete('/freelancers/$id');
-      _pessoas.removeWhere((p) => p.pessoaId == id);
+      await ApiService.dio.patch('/freelancers/$id', data: {'ativo': false});
+      // Atualiza localmente em vez de remover da lista
+      final index = _pessoas.indexWhere((p) => p.pessoaId == id);
+      if (index != -1) {
+        _pessoas.removeAt(index);
+      }
       notifyListeners();
-    } catch (e) {
-      _erro = 'Erro ao remover freelancer: $e';
+    } on DioException catch (e) {
+      print('=== ERRO removerPessoa ===');
+      print('Body: ${e.response?.data}');
+      _erro = e.response?.data['message'] ?? 'Erro ao desativar freelancer';
       notifyListeners();
     }
   }

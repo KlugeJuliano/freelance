@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/providers/auth_provider.dart';
+import 'package:freelance/providers/escalacao_provider.dart';
 import 'package:freelance/providers/funcao_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
 import 'package:freelance/providers/pessoa_provider.dart';
 import 'package:freelance/services/api_services.dart';
 import 'package:freelance/views/direcao/relatorios_consolidados_view.dart';
 import 'package:freelance/views/login_view.dart';
-import 'package:freelance/views/manager/jornada_view.dart';
+
 import 'package:freelance/views/manager/new_request_view.dart';
+import 'package:freelance/views/manager/jornada_view.dart';
 import 'package:freelance/views/manager/requests_view.dart';
 import 'package:freelance/views/rh/cadastros/colaboradores_view.dart';
 import 'package:freelance/views/rh/cadastros/funcoes_view.dart';
@@ -28,6 +30,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => PedidoProvider()),
         ChangeNotifierProvider(create: (_) => PessoaProvider()),
         ChangeNotifierProvider(create: (_) => FuncaoProvider()),
+        ChangeNotifierProvider(create: (_) => EscalacaoProvider()),
       ],
       child: const MyApp(),
     ),
@@ -40,7 +43,7 @@ final GoRouter _router = GoRouter(
     GoRoute(path: '/login', builder: (context, state) => const LoginView()),
     GoRoute(
       path: '/manager/gerente',
-      builder: (context, state) => GerenteView(),
+      builder: (context, state) => const RequestsView(),
     ),
     GoRoute(
       path: '/manager/new_request',
@@ -50,7 +53,7 @@ final GoRouter _router = GoRouter(
       path: '/manager/jornada_view/:pedidoId',
       builder: (context, state) {
         final pedidoId = state.pathParameters['pedidoId']!;
-        return ListaPedidosView();
+        return JornadaView(pedidoId: pedidoId);
       },
     ),
     GoRoute(

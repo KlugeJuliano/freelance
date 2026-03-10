@@ -5,14 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-class ListaPedidosView extends StatefulWidget {
-  const ListaPedidosView({super.key});
+class RequestsView extends StatefulWidget {
+  const RequestsView({super.key});
 
   @override
-  State<ListaPedidosView> createState() => _ListaPedidosViewState();
+  State<RequestsView> createState() => _RequestsViewState();
 }
 
-class _ListaPedidosViewState extends State<ListaPedidosView> {
+class _RequestsViewState extends State<RequestsView> {
   final _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
