@@ -1,7 +1,11 @@
-import 'package:dio/dio.dart';
+// lib/providers/funcao_provider.dart
+//
+// Substitui o provider em memória anterior.
+// Lê e escreve na tabela 'funcoes' do Supabase.
+
 import 'package:flutter/foundation.dart';
-import 'package:freelance/models/funcao_model.dart';
-import 'package:freelance/services/api_services.dart';
+import '../models/funcao_model.dart';
+import '../services/supabase_client.dart';
 
 class FuncaoProvider extends ChangeNotifier {
   List<FuncaoModel> _funcoes = [];
@@ -12,63 +16,65 @@ class FuncaoProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get erro => _erro;
 
-  Future<void> carregarFuncoes() async {
+  /// Carrega todas as funções do banco.
+  Future<void> fetchFuncoes() async {
     _loading = true;
     _erro = null;
     notifyListeners();
 
     try {
-      final response = await ApiService.dio.get('/funcoes');
-      _funcoes = (response.data as List)
-          .map((json) => FuncaoModel.fromJson(json))
+      final data = await supabase.from('funcoes').select().order('nome');
+
+      _funcoes = (data as List)
+          .map(
+            (row) => FuncaoModel(
+              funcaoId: row['id'] as String,
+              nomeFuncao: row['nome'] as String,
+              valorHora:
+                  (row['valor_hora'] as num?)?.toDouble() ??
+                  0.0, // Mapeando o valor
+            ),
+          )
           .toList();
     } catch (e) {
-      _erro = 'Erro ao carregar funções: $e';
+      _erro = "Erro ao carregar dados: $e";
     } finally {
       _loading = false;
       notifyListeners();
     }
   }
 
+  /// Insere uma nova função.
   Future<void> addFuncao(String nome, double valorHora) async {
-    // Verifica duplicata localmente
-    final jaExiste = _funcoes.any(
-      (f) => f.nomeFuncao.toLowerCase() == nome.toLowerCase(),
-    );
-    if (jaExiste) {
-      _erro = 'Já existe uma função com este nome.';
-      notifyListeners();
-      return;
-    }
+    _loading = true;
+    _erro = null;
+    notifyListeners();
 
     try {
-      final response = await ApiService.dio.post(
-        '/funcoes',
-        data: {'nome': nome, 'valor_hora': valorHora},
-      );
-      _funcoes.add(FuncaoModel.fromJson(response.data));
-      notifyListeners();
-    } on DioException catch (e) {
-      _erro = e.response?.data['message'] ?? 'Erro ao adicionar função';
+      await supabase.from('funcoes').insert({
+        'nome': nome,
+        'valor_hora': valorHora,
+      });
+      await fetchFuncoes();
+    } catch (e) {
+      _erro = "Erro ao adicionar função: $e";
+    } finally {
+      _loading = false;
       notifyListeners();
     }
   }
 
+  /// Remove uma função por id.
   Future<void> removeFuncao(String id) async {
-    try {
-      await ApiService.dio.delete('/funcoes/$id');
-      _funcoes.removeWhere((f) => f.funcaoId == id);
-      notifyListeners();
-    } catch (e) {
-      _erro = 'Erro ao remover função: $e';
-      notifyListeners();
-    }
+    await supabase.from('funcoes').delete().eq('id', id);
+    _funcoes.removeWhere((f) => f.funcaoId == id);
+    notifyListeners();
   }
 
   FuncaoModel? buscarPorId(String id) {
     try {
       return _funcoes.firstWhere((f) => f.funcaoId == id);
-    } catch (e) {
+    } catch (_) {
       return null;
     }
   }

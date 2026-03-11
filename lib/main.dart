@@ -3,12 +3,12 @@ import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/providers/auth_provider.dart';
 import 'package:freelance/providers/escalacao_provider.dart';
 import 'package:freelance/providers/funcao_provider.dart';
+import 'package:freelance/providers/loja_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
 import 'package:freelance/providers/pessoa_provider.dart';
-import 'package:freelance/services/api_services.dart';
+import 'package:freelance/theme/app_theme.dart';
 import 'package:freelance/views/direcao/relatorios_consolidados_view.dart';
 import 'package:freelance/views/login_view.dart';
-
 import 'package:freelance/views/manager/new_request_view.dart';
 import 'package:freelance/views/manager/jornada_view.dart';
 import 'package:freelance/views/manager/requests_view.dart';
@@ -19,10 +19,20 @@ import 'package:freelance/views/rh/fila_pedidos_view.dart';
 import 'package:freelance/views/splash_view.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  ApiService.init();
+
+  await dotenv.load(fileName: ".env");
+
+  await Supabase.initialize(
+    url: dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+
   runApp(
     MultiProvider(
       providers: [
@@ -31,6 +41,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => PessoaProvider()),
         ChangeNotifierProvider(create: (_) => FuncaoProvider()),
         ChangeNotifierProvider(create: (_) => EscalacaoProvider()),
+        ChangeNotifierProvider(create: (_) => LojaProvider()),
       ],
       child: const MyApp(),
     ),
@@ -87,7 +98,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Freelance App',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: AppTheme.data,
       routerConfig: _router,
     );
   }

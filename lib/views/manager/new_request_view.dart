@@ -3,6 +3,7 @@ import 'package:freelance/helpers/datetime_helper.dart';
 import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/providers/auth_provider.dart';
 import 'package:freelance/providers/funcao_provider.dart';
+import 'package:freelance/providers/loja_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -19,12 +20,23 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
   final _formKey = GlobalKey<FormState>();
 
   String? _funcaoSelecionada;
+  String? _lojaSelecionada;
 
   DateTime? dataInicio;
   DateTime? dataFim;
 
   final TextEditingController quantidadeController = TextEditingController();
   final TextEditingController observacaoController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Carrega lojas e funções ao abrir a tela
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<LojaProvider>().fetchLojas();
+      context.read<FuncaoProvider>().fetchFuncoes();
+    });
+  }
 
   @override
   void dispose() {
@@ -50,6 +62,13 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
       return;
     }
 
+    if (_lojaSelecionada == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selecione uma loja')));
+      return;
+    }
+
     final auth = context.read<AuthProvider>();
 
     if (auth.user == null) {
@@ -60,12 +79,12 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
     }
 
     final novoPedido = PedidoModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      lojaId: auth.user!['loja_id'] ?? '',
-      gerenteId: auth.user!['id'] ?? '',
+      id: '', // gerado pelo Supabase
+      lojaId: _lojaSelecionada!,
+      gerenteId: auth.user!.id,
+      funcaoId: _funcaoSelecionada!,
       dataInicio: dataInicio!,
       dataFim: dataFim!,
-      funcaoId: _funcaoSelecionada!,
       quantidade: int.parse(quantidadeController.text),
       observacoes: observacaoController.text,
       status: 'solicitado',
@@ -83,15 +102,15 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
 
   @override
   Widget build(BuildContext context) {
-    final funcaoProvider = context.read<FuncaoProvider>();
-    final funcoes = funcaoProvider.funcoes;
+    final funcoes = context.watch<FuncaoProvider>().funcoes;
+    final lojas = context.watch<LojaProvider>().lojas;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Nova Solicitação'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(), // volta para a tela anterior
+          onPressed: () => context.pop(),
         ),
       ),
       body: SafeArea(
@@ -105,8 +124,6 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 24),
-
-              // Card principal do formulário
               Card(
                 elevation: 3,
                 shape: RoundedRectangleBorder(
@@ -118,13 +135,41 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                     key: _formKey,
                     child: Column(
                       children: [
+                        // Loja
+                        DropdownButtonFormField<String>(
+                          decoration: const InputDecoration(
+                            labelText: 'Loja',
+                            border: OutlineInputBorder(),
+                          ),
+                          value: _lojaSelecionada,
+                          hint: Text(
+                            lojas.isEmpty
+                                ? 'Carregando lojas...'
+                                : 'Selecione a loja',
+                          ),
+                          items: lojas.map((loja) {
+                            return DropdownMenuItem<String>(
+                              value: loja.id,
+                              child: Text(loja.nomeLoja),
+                            );
+                          }).toList(),
+                          onChanged: lojas.isEmpty
+                              ? null
+                              : (value) {
+                                  setState(() => _lojaSelecionada = value);
+                                },
+                          validator: (value) =>
+                              value == null ? 'Selecione uma loja' : null,
+                        ),
+                        const SizedBox(height: 16),
+
                         // Função
                         DropdownButtonFormField<String>(
                           decoration: const InputDecoration(
                             labelText: 'Função',
                             border: OutlineInputBorder(),
                           ),
-                          initialValue: _funcaoSelecionada,
+                          value: _funcaoSelecionada,
                           hint: Text(
                             funcoes.isEmpty
                                 ? 'Nenhuma função cadastrada'
@@ -139,9 +184,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                           onChanged: funcoes.isEmpty
                               ? null
                               : (value) {
-                                  setState(() {
-                                    _funcaoSelecionada = value;
-                                  });
+                                  setState(() => _funcaoSelecionada = value);
                                 },
                           validator: (value) =>
                               value == null ? 'Selecione uma função' : null,
@@ -151,12 +194,9 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                         // Quantidade
                         TextFormField(
                           controller: quantidadeController,
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Campo obrigatorio";
-                            }
-                            return null;
-                          },
+                          validator: (value) => (value == null || value.isEmpty)
+                              ? 'Campo obrigatório'
+                              : null,
                           decoration: const InputDecoration(
                             labelText: 'Quantidade de Pessoas',
                             border: OutlineInputBorder(),
@@ -165,11 +205,11 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Data/hora início
+                        // Data início
                         TextFormField(
                           readOnly: true,
                           decoration: const InputDecoration(
-                            labelText: 'Data/Horario de inicio',
+                            labelText: 'Data/Horário de Início',
                             border: OutlineInputBorder(),
                           ),
                           validator: (_) =>
@@ -180,25 +220,24 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                               initialDate: dataInicio,
                             );
                             if (result != null) {
-                              setState(() {
-                                dataInicio = result;
-                              });
+                              setState(() => dataInicio = result);
                             }
                           },
                           controller: TextEditingController(
                             text: dataInicio == null
                                 ? ''
-                                : DateFormat('dd/MM/yyyy').format(dataInicio!),
+                                : DateFormat(
+                                    'dd/MM/yyyy HH:mm',
+                                  ).format(dataInicio!),
                           ),
                         ),
-
                         const SizedBox(height: 16),
 
-                        // Data/hora fim
+                        // Data fim
                         TextFormField(
                           readOnly: true,
                           decoration: const InputDecoration(
-                            labelText: 'Data/Hora fim',
+                            labelText: 'Data/Hora Fim',
                             border: OutlineInputBorder(),
                           ),
                           validator: (_) =>
@@ -209,28 +248,25 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                               initialDate: dataFim,
                             );
                             if (result != null) {
-                              setState(() {
-                                dataFim = result;
-                              });
+                              setState(() => dataFim = result);
                             }
                           },
                           controller: TextEditingController(
                             text: dataFim == null
                                 ? ''
-                                : DateFormat('dd/MM/yyyy').format(dataFim!),
+                                : DateFormat(
+                                    'dd/MM/yyyy HH:mm',
+                                  ).format(dataFim!),
                           ),
                         ),
                         const SizedBox(height: 16),
 
                         // Observações
                         TextFormField(
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return "Campo obrigatorio";
-                            }
-                            return null;
-                          },
                           controller: observacaoController,
+                          validator: (value) => (value == null || value.isEmpty)
+                              ? 'Campo obrigatório'
+                              : null,
                           decoration: const InputDecoration(
                             labelText: 'Observações',
                             border: OutlineInputBorder(),
@@ -242,10 +278,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 30),
-
-              // Botão principal
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
@@ -260,9 +293,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: () {
-                    _submeter();
-                  },
+                  onPressed: _submeter,
                 ),
               ),
             ],

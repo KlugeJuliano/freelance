@@ -1,12 +1,14 @@
+// lib/models/pessoa_model.dart
+
 class PessoaModel {
-  String pessoaId;
-  String nome;
-  String? cpf;
-  String? telefone;
-  String? email;
-  String? chavePix;
-  List<String> funcaoIds;
-  bool ativo; // <-- adicionar
+  final String pessoaId;
+  final String nome;
+  final String? cpf;
+  final String? telefone;
+  final String? email;
+  final String? chavePix;
+  final List<String> funcaoIds;
+  final bool ativo;
 
   PessoaModel({
     required this.pessoaId,
@@ -16,21 +18,37 @@ class PessoaModel {
     this.email,
     this.chavePix,
     this.funcaoIds = const [],
-    this.ativo = true, // <-- default true
+    this.ativo = true,
   });
 
-  factory PessoaModel.fromJson(Map<String, dynamic> json) {
+  factory PessoaModel.fromMap(Map<String, dynamic> map) {
     return PessoaModel(
-      pessoaId: json['id'],
-      nome: json['nome'],
-      cpf: json['cpf'],
-      telefone: json['telefone'],
-      email: json['email'],
-      chavePix: json['chave_pix'],
-      ativo: json['ativo'] ?? true, // <-- adicionar
+      pessoaId: map['id'] as String,
+      nome: map['nome'] as String,
+      cpf: map['cpf'] as String?,
+      telefone: map['telefone'] as String?,
+      email: map['email'] as String?,
+      chavePix: map['chave_pix'] as String?,
+      ativo: map['ativo'] as bool? ?? true,
+      // Supabase retorna join como: pessoa_funcao: [{ funcao_id: '...' }]
       funcaoIds:
-          (json['funcoes'] as List?)?.map((f) => f['id'].toString()).toList() ??
+          (map['pessoa_funcao'] as List?)
+              ?.map((f) => f['funcao_id'].toString())
+              .toList() ??
           [],
+    );
+  }
+
+  PessoaModel copyWith({bool? ativo}) {
+    return PessoaModel(
+      pessoaId: pessoaId,
+      nome: nome,
+      cpf: cpf,
+      telefone: telefone,
+      email: email,
+      chavePix: chavePix,
+      funcaoIds: funcaoIds,
+      ativo: ativo ?? this.ativo,
     );
   }
 }

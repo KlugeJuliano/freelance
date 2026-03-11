@@ -114,7 +114,6 @@ class _RelatoriosConsolidadosViewState extends State<RelatoriosConsolidadosView>
       return const Center(child: Text('Nenhum dado encontrado'));
     }
 
-    // Agrupa por loja
     final Map<String, List<dynamic>> porLoja = {};
     for (final item in _evolucao) {
       final nome = item['nome'] as String;
@@ -185,7 +184,7 @@ class _RelatoriosConsolidadosViewState extends State<RelatoriosConsolidadosView>
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await context.read<AuthProvider>().logout();
+              await context.read<AuthProvider>().signOut(); // corrigido
               if (mounted) context.go('/login');
             },
           ),

@@ -1,51 +1,61 @@
+// lib/services/status_service.dart
+
 import 'package:freelance/models/pedido_model.dart';
+import 'package:freelance/services/supabase_client.dart';
 
 enum StatusPedido { solicitado, aprovado, cancelado, recusado, finalizado }
 
 class StatusService {
-  PedidoModel aprovarPedido(PedidoModel pedido) {
+  Future<PedidoModel> aprovarPedido(PedidoModel pedido) async {
     final statusAtual = StatusPedido.values.byName(pedido.status);
 
     if (statusAtual != StatusPedido.solicitado) {
-      throw Exception("Pedido não pode ser aprovado");
+      throw Exception('Pedido não pode ser aprovado');
     }
 
-    pedido.status = StatusPedido.aprovado.name;
-
-    return pedido;
+    return await _atualizarStatus(pedido, StatusPedido.aprovado);
   }
 
-  PedidoModel cancelarPedido(PedidoModel pedido) {
+  Future<PedidoModel> cancelarPedido(PedidoModel pedido) async {
     final statusAtual = StatusPedido.values.byName(pedido.status);
 
     if (statusAtual != StatusPedido.solicitado) {
       throw Exception('Este pedido não pode ser cancelado');
     }
 
-    pedido.status = StatusPedido.cancelado.name;
-
-    return pedido;
+    return await _atualizarStatus(pedido, StatusPedido.cancelado);
   }
 
-  //Pedido só pode ser recusado depois que foi aprovado pelo RH
-  PedidoModel recusarPedido(PedidoModel pedido) {
+  // Pedido só pode ser recusado depois que foi aprovado pelo RH
+  Future<PedidoModel> recusarPedido(PedidoModel pedido) async {
     final statusAtual = StatusPedido.values.byName(pedido.status);
 
     if (statusAtual != StatusPedido.aprovado) {
       throw Exception('Este pedido não pode ser recusado');
     }
 
-    pedido.status = StatusPedido.recusado.name;
-    return pedido;
+    return await _atualizarStatus(pedido, StatusPedido.recusado);
   }
 
-  PedidoModel finalizarPedido(PedidoModel pedido) {
+  Future<PedidoModel> finalizarPedido(PedidoModel pedido) async {
     final statusAtual = StatusPedido.values.byName(pedido.status);
 
     if (statusAtual != StatusPedido.aprovado) {
-      throw Exception('Este pedido não pode ser finalizado ');
+      throw Exception('Este pedido não pode ser finalizado');
     }
-    pedido.status = StatusPedido.finalizado.name;
-    return pedido;
+
+    return await _atualizarStatus(pedido, StatusPedido.finalizado);
+  }
+
+  Future<PedidoModel> _atualizarStatus(
+    PedidoModel pedido,
+    StatusPedido novoStatus,
+  ) async {
+    await supabase
+        .from('pedidos')
+        .update({'status': novoStatus.name})
+        .eq('id', pedido.id);
+
+    return pedido.copyWith(status: novoStatus.name);
   }
 }

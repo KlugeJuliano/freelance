@@ -1,47 +1,57 @@
-import 'package:freelance/models/pessoa_no_pedido.dart';
+// lib/models/pedido_model.dart
 
 class PedidoModel {
-  String id;
-  String lojaId;
-  String gerenteId;
-  DateTime dataInicio;
-  DateTime dataFim;
-  String funcaoId;
-  int quantidade;
-  String observacoes;
-  String status;
-  DateTime dataCriacao;
-  List<PessoaNoPedidoModel> pessoas;
+  final String id;
+  final String lojaId;
+  final String funcaoId;
+  final String gerenteId;
+  final int quantidade;
+  final DateTime dataInicio;
+  final DateTime dataFim;
+  final String? observacoes;
+  final String status;
+  final DateTime dataCriacao;
 
   PedidoModel({
     required this.id,
     required this.lojaId,
+    required this.funcaoId,
     required this.gerenteId,
+    required this.quantidade,
     required this.dataInicio,
     required this.dataFim,
-    required this.funcaoId,
-    required this.quantidade,
-    required this.observacoes,
+    this.observacoes,
     required this.status,
     required this.dataCriacao,
-    List<PessoaNoPedidoModel>? pessoas,
-  }) : pessoas = pessoas ?? [];
+  });
 
-  factory PedidoModel.fromJson(Map<String, dynamic> json) {
+  factory PedidoModel.fromMap(Map<String, dynamic> map) {
     return PedidoModel(
-      id: json['id'],
-      lojaId: json['loja_id'],
-      gerenteId: json['gerente_id'],
-      dataInicio: DateTime.parse(json['data_inicio']),
-      dataFim: DateTime.parse(json['data_fim']),
-      funcaoId: json['funcao_id'],
-      quantidade: json['quantidade'],
-      observacoes: json['observacoes'] ?? '',
-      status: json['status'],
-      dataCriacao: DateTime.parse(json['created_at']),
-      pessoas: (json['freelancers'] as List?)
-          ?.map((f) => PessoaNoPedidoModel.fromJson(f))
-          .toList(),
+      id: map['id'] as String,
+      lojaId: map['loja_id'] as String,
+      funcaoId: map['funcao_id'] as String,
+      gerenteId: map['gerente_id'] as String,
+      quantidade: map['quantidade'] as int,
+      dataInicio: DateTime.parse(map['data_inicio'] as String),
+      dataFim: DateTime.parse(map['data_fim'] as String),
+      observacoes: map['observacoes'] as String?,
+      status: map['status'] as String,
+      dataCriacao: DateTime.parse(map['created_at'] as String),
+    );
+  }
+
+  PedidoModel copyWith({String? status}) {
+    return PedidoModel(
+      id: id,
+      lojaId: lojaId,
+      funcaoId: funcaoId,
+      gerenteId: gerenteId,
+      quantidade: quantidade,
+      dataInicio: dataInicio,
+      dataFim: dataFim,
+      observacoes: observacoes,
+      status: status ?? this.status,
+      dataCriacao: dataCriacao,
     );
   }
 }

@@ -1,7 +1,9 @@
+// lib/models/funcao_model.dart
+
 class FuncaoModel {
-  String funcaoId;
-  String nomeFuncao;
-  double? valorHora;
+  final String funcaoId;
+  final String nomeFuncao;
+  final double? valorHora;
 
   FuncaoModel({
     required this.funcaoId,
@@ -9,12 +11,12 @@ class FuncaoModel {
     this.valorHora,
   });
 
-  factory FuncaoModel.fromJson(Map<String, dynamic> json) {
+  factory FuncaoModel.fromMap(Map<String, dynamic> map) {
     return FuncaoModel(
-      funcaoId: json['id'],
-      nomeFuncao: json['nome'],
-      valorHora: json['valor_hora'] != null
-          ? double.tryParse(json['valor_hora'].toString())
+      funcaoId: map['id'] as String,
+      nomeFuncao: map['nome'] as String,
+      valorHora: map['valor_hora'] != null
+          ? double.tryParse(map['valor_hora'].toString())
           : null,
     );
   }

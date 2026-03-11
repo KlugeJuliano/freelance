@@ -1,7 +1,6 @@
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:freelance/models/pessoa_model.dart';
-import 'package:freelance/services/api_services.dart';
+import '../models/pessoa_model.dart';
+import '../services/supabase_client.dart';
 
 class PessoaProvider extends ChangeNotifier {
   List<PessoaModel> _pessoas = [];
@@ -12,19 +11,16 @@ class PessoaProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get erro => _erro;
 
-  Future<void> carregarFreelancers() async {
-    _loading = true;
-    _erro = null;
-    notifyListeners();
-
+  Future<void> fetchPessoas() async {
     try {
-      final response = await ApiService.dio.get('/freelancers');
-      _pessoas = (response.data as List)
-          .map((json) => PessoaModel.fromJson(json))
-          .where((p) => p.ativo == true) // <-- só ativos
-          .toList();
+      _loading = true;
+      _erro = null;
+      notifyListeners();
+
+      final data = await supabase.from('pessoas').select().order('nome');
+      _pessoas = (data as List).map((row) => PessoaModel.fromMap(row)).toList();
     } catch (e) {
-      _erro = 'Erro ao carregar freelancers: $e';
+      _erro = "Erro ao carregar colaboradores";
     } finally {
       _loading = false;
       notifyListeners();
@@ -33,49 +29,43 @@ class PessoaProvider extends ChangeNotifier {
 
   Future<void> adicionarPessoa(PessoaModel pessoa) async {
     try {
-      final response = await ApiService.dio.post(
-        '/freelancers',
-        data: {
-          'nome': pessoa.nome,
-          'cpf': pessoa.cpf,
-          'telefone': pessoa.telefone,
-          'email': pessoa.email,
-          'chave_pix': pessoa.chavePix,
-          'funcoes': pessoa.funcaoIds,
-        },
-      );
-      _pessoas.add(PessoaModel.fromJson(response.data));
+      _loading = true;
+      _erro = null;
       notifyListeners();
-    } on DioException catch (e) {
-      print('=== ERRO adicionarPessoa ===');
-      print('Body: ${e.response?.data}'); // <-- adicionar
-      _erro = e.response?.data['message'] ?? 'Erro ao adicionar freelancer';
+
+      final response = await supabase
+          .from('pessoas')
+          .insert({
+            'nome': pessoa.nome,
+            'cpf': pessoa.cpf,
+            'telefone': pessoa.telefone,
+            'email': pessoa.email,
+            'chave_pix': pessoa.chavePix,
+            // No Postgres, use o tipo JSONB ou Array
+          })
+          .select()
+          .single();
+
+      _pessoas.add(PessoaModel.fromMap(response));
+      _pessoas.sort((a, b) => a.nome.compareTo(b.nome));
+    } catch (e) {
+      print("ERRO SUPABASE: $e");
+
+      _erro = "Falha ao salvar colaborador.";
+    } finally {
+      _loading = false;
       notifyListeners();
     }
   }
 
   Future<void> removerPessoa(String id) async {
     try {
-      await ApiService.dio.patch('/freelancers/$id', data: {'ativo': false});
-      // Atualiza localmente em vez de remover da lista
-      final index = _pessoas.indexWhere((p) => p.pessoaId == id);
-      if (index != -1) {
-        _pessoas.removeAt(index);
-      }
+      await supabase.from('pessoas').delete().eq('id', id);
+      _pessoas.removeWhere((p) => p.pessoaId == id);
       notifyListeners();
-    } on DioException catch (e) {
-      print('=== ERRO removerPessoa ===');
-      print('Body: ${e.response?.data}');
-      _erro = e.response?.data['message'] ?? 'Erro ao desativar freelancer';
-      notifyListeners();
-    }
-  }
-
-  PessoaModel? buscarPessoaPorId(String id) {
-    try {
-      return _pessoas.firstWhere((p) => p.pessoaId == id);
     } catch (e) {
-      return null;
+      _erro = "Erro ao excluir.";
+      notifyListeners();
     }
   }
 }

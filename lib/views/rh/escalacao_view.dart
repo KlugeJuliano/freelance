@@ -29,8 +29,8 @@ class _EscalacaoViewState extends State<EscalacaoView> {
     super.initState();
     Future.microtask(() {
       context.read<EscalacaoProvider>().carregarEscalados(widget.pedido.id);
-      context.read<PessoaProvider>().carregarFreelancers();
-      context.read<FuncaoProvider>().carregarFuncoes();
+      context.read<PessoaProvider>().fetchPessoas();
+      context.read<FuncaoProvider>().fetchFuncoes();
     });
   }
 
@@ -54,9 +54,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
       print('  ${f.funcaoId} | ${f.nomeFuncao}');
     }
 
-    final escaladosIds = escalacaoProvider.escalados
-        .map((e) => e.pessoaId)
-        .toSet();
+    final escaladosIds = escalacaoProvider.escalados.map((e) => e.nome).toSet();
     final compativeis = pessoaProvider.pessoas
         .where(
           (f) =>
@@ -275,7 +273,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
             IconButton(
               icon: const Icon(Icons.logout, color: _textMuted),
               onPressed: () async {
-                await context.read<AuthProvider>().logout();
+                await context.read<AuthProvider>().signOut();
                 if (!mounted) return;
                 context.go('/login');
               },
@@ -534,7 +532,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
                               onPressed: () =>
                                   escalacaoProvider.removerEscalado(
                                     widget.pedido.id,
-                                    escalado.pessoaId,
+                                    escalado.nome,
                                   ),
                             ),
                           ),

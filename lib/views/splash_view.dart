@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:freelance/providers/auth_provider.dart';
+import 'package:freelance/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
@@ -12,9 +13,6 @@ class SplashView extends StatefulWidget {
 
 class _SplashViewState extends State<SplashView>
     with SingleTickerProviderStateMixin {
-  static const _dark = Color(0xFF0F1117);
-  static const _accent = Color(0xFF00E5A0);
-
   late AnimationController _controller;
   late Animation<double> _fadeIn;
   late Animation<double> _scale;
@@ -73,7 +71,7 @@ class _SplashViewState extends State<SplashView>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: AppColors.background,
       body: Center(
         child: FadeTransition(
           opacity: _fadeIn,
@@ -86,12 +84,12 @@ class _SplashViewState extends State<SplashView>
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: const Color(0x2200E5A0),
+                    color: AppColors.accentDim,
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: const Icon(
                     Icons.people_alt_outlined,
-                    color: _accent,
+                    color: AppColors.accent,
                     size: 40,
                   ),
                 ),
@@ -99,7 +97,7 @@ class _SplashViewState extends State<SplashView>
                 const Text(
                   'Freelance',
                   style: TextStyle(
-                    color: Color(0xFFEEEEF5),
+                    color: AppColors.textPrimary,
                     fontSize: 28,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.5,
@@ -108,7 +106,7 @@ class _SplashViewState extends State<SplashView>
                 const SizedBox(height: 6),
                 const Text(
                   'Gestão de colaboradores',
-                  style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 14),
                 ),
                 const SizedBox(height: 48),
                 SizedBox(
@@ -116,7 +114,7 @@ class _SplashViewState extends State<SplashView>
                   height: 24,
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
-                    color: _accent.withOpacity(0.6),
+                    color: AppColors.accent.withOpacity(0.6),
                   ),
                 ),
               ],

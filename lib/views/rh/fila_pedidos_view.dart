@@ -24,8 +24,8 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
   void initState() {
     super.initState();
     Future.microtask(() {
-      context.read<PedidoProvider>().carregarPedidos();
-      context.read<FuncaoProvider>().carregarFuncoes();
+      context.read<PedidoProvider>().fetchPedidos();
+      context.read<FuncaoProvider>().fetchFuncoes();
     });
   }
 
@@ -114,7 +114,7 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
             label: 'Sair',
             danger: true,
             onTap: () async {
-              await auth.logout();
+              await auth.signOut();
               if (!mounted) return;
               context.go('/login');
             },
@@ -187,7 +187,7 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
           actions: [
             IconButton(
               icon: const Icon(Icons.refresh, color: _textMuted),
-              onPressed: () => context.read<PedidoProvider>().carregarPedidos(),
+              onPressed: () => context.read<PedidoProvider>().fetchPedidos(),
             ),
           ],
         ),
@@ -327,7 +327,7 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
                                     fontSize: 13,
                                   ),
                                 ),
-                                if (pedido.observacoes.isNotEmpty) ...[
+                                if (pedido.observacoes!.isNotEmpty) ...[
                                   const SizedBox(width: 16),
                                   const Icon(
                                     Icons.notes,
@@ -337,7 +337,7 @@ class _FilaPedidosViewState extends State<FilaPedidosView> {
                                   const SizedBox(width: 6),
                                   Expanded(
                                     child: Text(
-                                      pedido.observacoes,
+                                      pedido.observacoes!,
                                       style: const TextStyle(
                                         color: _textMuted,
                                         fontSize: 13,

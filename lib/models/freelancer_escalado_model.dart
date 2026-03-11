@@ -1,12 +1,14 @@
+// lib/models/freelancer_escalado_model.dart
+
 class FreelancerEscaladoModel {
-  String freelancerId;
-  String nome;
-  String? cpf;
-  String status;
-  DateTime? entradaReal;
-  DateTime? saidaReal;
-  double? horasTrabalhadas;
-  double? valorTotal;
+  final String freelancerId;
+  final String nome;
+  final String? cpf;
+  final String status;
+  final DateTime? entradaReal;
+  final DateTime? saidaReal;
+  final double? horasTrabalhadas;
+  final double? valorTotal;
 
   FreelancerEscaladoModel({
     required this.freelancerId,
@@ -19,25 +21,39 @@ class FreelancerEscaladoModel {
     this.valorTotal,
   });
 
-  factory FreelancerEscaladoModel.fromJson(Map<String, dynamic> json) {
-    final pivot = json['pivot'] as Map<String, dynamic>? ?? {};
+  factory FreelancerEscaladoModel.fromMap(Map<String, dynamic> map) {
+    // O Supabase retorna join achatado — sem 'pivot'
+    // Esperamos: pessoas.id, pessoas.nome, pessoas.cpf + campos da escalacao
     return FreelancerEscaladoModel(
-      freelancerId: json['id'],
-      nome: json['nome'],
-      cpf: json['cpf'],
-      status: pivot['status'] ?? 'escalado',
-      entradaReal: pivot['entrada_real'] != null
-          ? DateTime.parse(pivot['entrada_real'])
+      freelancerId: map['pessoa_id'] as String,
+      nome: map['pessoas']?['nome'] as String? ?? map['nome'] as String? ?? '',
+      cpf: map['pessoas']?['cpf'] as String?,
+      status: map['status'] as String? ?? 'escalado',
+      entradaReal: map['entrada_real'] != null
+          ? DateTime.parse(map['entrada_real'] as String)
           : null,
-      saidaReal: pivot['saida_real'] != null
-          ? DateTime.parse(pivot['saida_real'])
+      saidaReal: map['saida_real'] != null
+          ? DateTime.parse(map['saida_real'] as String)
           : null,
-      horasTrabalhadas: pivot['horas_trabalhadas'] != null
-          ? double.tryParse(pivot['horas_trabalhadas'].toString())
+      horasTrabalhadas: map['horas_trabalhadas'] != null
+          ? double.tryParse(map['horas_trabalhadas'].toString())
           : null,
-      valorTotal: pivot['valor_total'] != null
-          ? double.tryParse(pivot['valor_total'].toString())
+      valorTotal: map['valor_total'] != null
+          ? double.tryParse(map['valor_total'].toString())
           : null,
+    );
+  }
+
+  FreelancerEscaladoModel copyWith({String? status}) {
+    return FreelancerEscaladoModel(
+      freelancerId: freelancerId,
+      nome: nome,
+      cpf: cpf,
+      status: status ?? this.status,
+      entradaReal: entradaReal,
+      saidaReal: saidaReal,
+      horasTrabalhadas: horasTrabalhadas,
+      valorTotal: valorTotal,
     );
   }
 }

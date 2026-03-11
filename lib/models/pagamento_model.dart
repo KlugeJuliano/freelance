@@ -1,16 +1,20 @@
+// lib/models/pagamento_model.dart
+
 class PagamentoModel {
-  String id;
-  String pedidoFreelancerId;
-  double totalHoras;
-  double valorHora;
-  double valorTotal;
-  String status;
-  String? reciboNumero;
-  DateTime? pagoEm;
+  final String id;
+  final String pedidoId;
+  final String pessoaId;
+  final double totalHoras;
+  final double valorHora;
+  final double valorTotal;
+  final String status;
+  final String? reciboNumero;
+  final DateTime? pagoEm;
 
   PagamentoModel({
     required this.id,
-    required this.pedidoFreelancerId,
+    required this.pedidoId,
+    required this.pessoaId,
     required this.totalHoras,
     required this.valorHora,
     required this.valorTotal,
@@ -19,16 +23,37 @@ class PagamentoModel {
     this.pagoEm,
   });
 
-  factory PagamentoModel.fromJson(Map<String, dynamic> json) {
+  factory PagamentoModel.fromMap(Map<String, dynamic> map) {
     return PagamentoModel(
-      id: json['id'],
-      pedidoFreelancerId: json['pedido_freelancer_id'],
-      totalHoras: double.tryParse(json['total_horas'].toString()) ?? 0,
-      valorHora: double.tryParse(json['valor_hora'].toString()) ?? 0,
-      valorTotal: double.tryParse(json['valor_total'].toString()) ?? 0,
-      status: json['status'],
-      reciboNumero: json['recibo_numero'],
-      pagoEm: json['pago_em'] != null ? DateTime.parse(json['pago_em']) : null,
+      id: map['id'] as String,
+      pedidoId: map['pedido_id'] as String,
+      pessoaId: map['pessoa_id'] as String,
+      totalHoras: double.tryParse(map['total_horas'].toString()) ?? 0,
+      valorHora: double.tryParse(map['valor_hora'].toString()) ?? 0,
+      valorTotal: double.tryParse(map['valor_total'].toString()) ?? 0,
+      status: map['status'] as String,
+      reciboNumero: map['recibo_numero'] as String?,
+      pagoEm: map['pago_em'] != null
+          ? DateTime.parse(map['pago_em'] as String)
+          : null,
+    );
+  }
+
+  PagamentoModel copyWith({
+    String? status,
+    String? reciboNumero,
+    DateTime? pagoEm,
+  }) {
+    return PagamentoModel(
+      id: id,
+      pedidoId: pedidoId,
+      pessoaId: pessoaId,
+      totalHoras: totalHoras,
+      valorHora: valorHora,
+      valorTotal: valorTotal,
+      status: status ?? this.status,
+      reciboNumero: reciboNumero ?? this.reciboNumero,
+      pagoEm: pagoEm ?? this.pagoEm,
     );
   }
 }

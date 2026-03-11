@@ -1,16 +1,15 @@
 // lib/providers/escalacao_provider.dart
 
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:freelance/models/pessoa_no_pedido.dart';
+import 'package:freelance/models/freelancer_escalado_model.dart';
 import 'package:freelance/services/escalacao_service.dart';
 
 class EscalacaoProvider extends ChangeNotifier {
-  List<PessoaNoPedidoModel> _escalados = [];
+  List<FreelancerEscaladoModel> _escalados = [];
   bool _loading = false;
   String? _erro;
 
-  List<PessoaNoPedidoModel> get escalados => _escalados;
+  List<FreelancerEscaladoModel> get escalados => _escalados;
   bool get loading => _loading;
   String? get erro => _erro;
 
@@ -19,11 +18,7 @@ class EscalacaoProvider extends ChangeNotifier {
     _erro = null;
     notifyListeners();
     try {
-      _escalados = (await EscalacaoService.buscarEscalados(
-        pedidoId,
-      )).cast<PessoaNoPedidoModel>();
-    } on DioException catch (e) {
-      _erro = e.response?.data['message'] ?? 'Erro ao carregar escalação';
+      _escalados = await EscalacaoService.buscarEscalados(pedidoId);
     } catch (e) {
       _erro = 'Erro ao carregar escalação: $e';
     } finally {
@@ -32,24 +27,24 @@ class EscalacaoProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> escalarFreelancer(String pedidoId, String freelancerId) async {
+  Future<void> escalarFreelancer(String pedidoId, String pessoaId) async {
     _erro = null;
     try {
-      await EscalacaoService.escalarFreelancer(pedidoId, freelancerId);
+      await EscalacaoService.escalarFreelancer(pedidoId, pessoaId);
       await carregarEscalados(pedidoId);
-    } on DioException catch (e) {
-      _erro = e.response?.data['message'] ?? 'Erro ao escalar';
+    } catch (e) {
+      _erro = 'Erro ao escalar: $e';
       notifyListeners();
     }
   }
 
-  Future<void> removerEscalado(String pedidoId, String freelancerId) async {
+  Future<void> removerEscalado(String pedidoId, String pessoaId) async {
     _erro = null;
     try {
-      await EscalacaoService.removerEscalado(pedidoId, freelancerId);
+      await EscalacaoService.removerEscalado(pedidoId, pessoaId);
       await carregarEscalados(pedidoId);
-    } on DioException catch (e) {
-      _erro = e.response?.data['message'] ?? 'Erro ao remover';
+    } catch (e) {
+      _erro = 'Erro ao remover: $e';
       notifyListeners();
     }
   }
@@ -59,8 +54,8 @@ class EscalacaoProvider extends ChangeNotifier {
     try {
       await EscalacaoService.finalizar(pedidoId);
       return true;
-    } on DioException catch (e) {
-      _erro = e.response?.data['message'] ?? 'Erro ao finalizar';
+    } catch (e) {
+      _erro = 'Erro ao finalizar: $e';
       notifyListeners();
       return false;
     }

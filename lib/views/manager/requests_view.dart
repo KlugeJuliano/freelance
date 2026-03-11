@@ -18,11 +18,11 @@ class _RequestsViewState extends State<RequestsView> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => context.read<PedidoProvider>().carregarPedidos());
+    Future.microtask(() => context.read<PedidoProvider>().fetchPedidos());
   }
 
   Future<void> _recarregar() async {
-    await context.read<PedidoProvider>().carregarPedidos();
+    await context.read<PedidoProvider>().fetchPedidos();
   }
 
   @override
@@ -38,7 +38,7 @@ class _RequestsViewState extends State<RequestsView> {
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () async {
-              await context.read<AuthProvider>().logout();
+              await context.read<AuthProvider>().signOut();
               if (mounted) context.go('/login');
             },
           ),
@@ -46,23 +46,6 @@ class _RequestsViewState extends State<RequestsView> {
       ),
       body: pedidoProvider.loading
           ? const Center(child: CircularProgressIndicator())
-          : pedidoProvider.erro != null
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    pedidoProvider.erro!,
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: _recarregar,
-                    child: const Text('Tentar novamente'),
-                  ),
-                ],
-              ),
-            )
           : pedidoProvider.pedidos.isEmpty
           ? const Center(child: Text('Nenhum pedido criado ainda'))
           : RefreshIndicator(

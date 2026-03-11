@@ -1,49 +1,97 @@
+// lib/providers/auth_provider.dart
+
 import 'package:flutter/foundation.dart';
-import 'package:freelance/services/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/supabase_client.dart';
 
 class AuthProvider extends ChangeNotifier {
-  Map<String, dynamic>? _user;
+  User? _user;
+  String? _role;
   bool _loading = false;
   String? _erro;
 
-  Map<String, dynamic>? get user => _user;
+  User? get user => _user;
+  bool get isLogado => _user != null;
+  String? get role => _role;
   bool get loading => _loading;
   String? get erro => _erro;
-  bool get isLogado => _user != null;
 
-  Future<void> verificarLogin() async {
-    final logado = await AuthService.isLogado();
-    if (logado) {
-      _user = await AuthService.getUsuarioLogado();
+  AuthProvider() {
+    supabase.auth.onAuthStateChange.listen((data) {
+      _user = data.session?.user;
+      if (_user != null) {
+        _role = _user!.userMetadata?['role'] as String?;
+      } else {
+        _role = null;
+      }
       notifyListeners();
-    }
+    });
   }
 
+  /// Chamado pelo SplashView — restaura sessão persistida e carrega o role.
+  Future<void> verificarLogin() async {
+    _user = supabase.auth.currentUser;
+    if (_user != null) {
+      _role = _user!.userMetadata?['role'] as String?;
+    }
+    notifyListeners();
+  }
+
+  /// Login com email e senha. Retorna true em caso de sucesso.
   Future<bool> login(String email, String password) async {
     _loading = true;
     _erro = null;
     notifyListeners();
 
     try {
-      _user = await AuthService.login(email, password);
-      _loading = false;
-      notifyListeners();
+      final response = await supabase.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      _user = response.user;
+      _role = _user?.userMetadata?['role'] as String?;
       return true;
+    } on AuthException catch (e) {
+      _erro = e.message;
+      return false;
     } catch (e) {
-      _erro = e.toString().replaceFirst('Exception: ', '');
+      _erro = 'Erro ao conectar. Tente novamente.';
+      return false;
+    } finally {
       _loading = false;
       notifyListeners();
-      return false;
     }
   }
 
-  Future<void> logout() async {
-    await AuthService.logout();
-    _user = null;
+  /// Cadastro de novo usuário.
+  /// [role] deve ser 'gerente', 'rh' ou 'diretoria'.
+  Future<void> signUp(String email, String password, String role) async {
+    _loading = true;
+    _erro = null;
     notifyListeners();
+
+    try {
+      final response = await supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: {'role': role},
+      );
+      _user = response.user;
+      _role = role;
+    } on AuthException catch (e) {
+      _erro = e.message;
+    } finally {
+      _loading = false;
+      notifyListeners();
+    }
   }
 
-  String? get role => _user?['role'] as String?;
-  String? get nome => _user?['nome'] as String?;
-  String? get userId => _user?['id'] as String?;
+  /// Logout.
+  Future<void> signOut() async {
+    await supabase.auth.signOut();
+    _user = null;
+    _role = null;
+    _erro = null;
+    notifyListeners();
+  }
 }
