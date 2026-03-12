@@ -1,41 +1,112 @@
 // lib/services/relatorio_service.dart
-//
-// Substitui chamadas Dio/Laravel por queries diretas no Supabase.
-// Os campos retornados são compatíveis com RelatoriosConsolidadosView:
-//   nome, total_pedidos, total_horas, total_valor, valor_hora (por função)
-//   mes, total_valor (evolução)
 
 import 'package:freelance/services/supabase_client.dart';
 
 class RelatorioService {
-  /// Gastos agrupados por loja.
-  /// Retorna: [{ nome, total_pedidos, total_horas, total_valor }]
-  static Future<List<dynamic>> gastosPorLoja({
+  /// Pedidos agrupados por status, com contagem.
+  /// Retorna: [{ status, total }]
+  static Future<List<Map<String, dynamic>>> pedidosPorStatus() async {
+    final raw = await supabase.from('pedidos').select('status');
+
+    final Map<String, int> agrupado = {};
+    for (final row in raw as List) {
+      final status = row['status'] as String? ?? 'desconhecido';
+      agrupado[status] = (agrupado[status] ?? 0) + 1;
+    }
+
+    return agrupado.entries
+        .map((e) => {'status': e.key, 'total': e.value})
+        .toList()
+      ..sort((a, b) => (b['total'] as int).compareTo(a['total'] as int));
+  }
+
+  /// Pedidos agrupados por loja.
+  /// Retorna: [{ nome, total_pedidos }]
+  static Future<List<Map<String, dynamic>>> pedidosPorLoja({
     String? dataInicio,
     String? dataFim,
   }) async {
-    var query = supabase
-        .from('pagamentos')
-        .select('pedidos(loja), total_horas, valor_total');
+    var query = supabase.from('pedidos').select('lojas(nome), data_inicio');
+
+    if (dataInicio != null) query = query.gte('data_inicio', dataInicio);
+    if (dataFim != null) query = query.lte('data_inicio', dataFim);
 
     final raw = await query;
 
-    // Agrupamento em memória
+    final Map<String, int> agrupado = {};
+    for (final row in raw as List) {
+      final nome = row['lojas']?['nome'] as String? ?? 'Sem loja';
+      agrupado[nome] = (agrupado[nome] ?? 0) + 1;
+    }
+
+    return agrupado.entries
+        .map((e) => {'nome': e.key, 'total_pedidos': e.value})
+        .toList()
+      ..sort(
+        (a, b) =>
+            (b['total_pedidos'] as int).compareTo(a['total_pedidos'] as int),
+      );
+  }
+
+  /// Pedidos agrupados por função.
+  /// Retorna: [{ nome, total_pedidos }]
+  static Future<List<Map<String, dynamic>>> pedidosPorFuncao({
+    String? dataInicio,
+    String? dataFim,
+  }) async {
+    var query = supabase.from('pedidos').select('funcoes(nome), data_inicio');
+
+    if (dataInicio != null) query = query.gte('data_inicio', dataInicio);
+    if (dataFim != null) query = query.lte('data_inicio', dataFim);
+
+    final raw = await query;
+
+    final Map<String, int> agrupado = {};
+    for (final row in raw as List) {
+      final nome = row['funcoes']?['nome'] as String? ?? 'Sem função';
+      agrupado[nome] = (agrupado[nome] ?? 0) + 1;
+    }
+
+    return agrupado.entries
+        .map((e) => {'nome': e.key, 'total_pedidos': e.value})
+        .toList()
+      ..sort(
+        (a, b) =>
+            (b['total_pedidos'] as int).compareTo(a['total_pedidos'] as int),
+      );
+  }
+
+  /// Custos agrupados por loja (via pagamentos).
+  /// Retorna: [{ nome, total_horas, total_valor }]
+  static Future<List<Map<String, dynamic>>> custosPorLoja({
+    String? dataInicio,
+    String? dataFim,
+  }) async {
+    final raw = await supabase
+        .from('pagamentos')
+        .select('total_horas, valor_total, pedidos(data_inicio, lojas(nome))');
+
     final Map<String, Map<String, dynamic>> agrupado = {};
     for (final row in raw as List) {
-      final loja = row['pedidos']?['loja'] as String? ?? 'Sem loja';
+      final dataRow = row['pedidos']?['data_inicio'] as String?;
+      if (dataInicio != null &&
+          dataRow != null &&
+          dataRow.compareTo(dataInicio) < 0) {
+        continue;
+      }
+      if (dataFim != null &&
+          dataRow != null &&
+          dataRow.compareTo(dataFim) > 0) {
+        continue;
+      }
+
+      final nome = row['pedidos']?['lojas']?['nome'] as String? ?? 'Sem loja';
       agrupado.putIfAbsent(
-        loja,
-        () => {
-          'nome': loja,
-          'total_pedidos': 0,
-          'total_horas': 0.0,
-          'total_valor': 0.0,
-        },
+        nome,
+        () => {'nome': nome, 'total_horas': 0.0, 'total_valor': 0.0},
       );
-      agrupado[loja]!['total_pedidos'] += 1;
-      agrupado[loja]!['total_horas'] += (row['total_horas'] ?? 0).toDouble();
-      agrupado[loja]!['total_valor'] += (row['valor_total'] ?? 0).toDouble();
+      agrupado[nome]!['total_horas'] += (row['total_horas'] ?? 0).toDouble();
+      agrupado[nome]!['total_valor'] += (row['valor_total'] ?? 0).toDouble();
     }
 
     return agrupado.values.toList()..sort(
@@ -44,74 +115,38 @@ class RelatorioService {
     );
   }
 
-  /// Gastos agrupados por função.
-  /// Retorna: [{ nome, total_pedidos, total_horas, total_valor, valor_hora }]
-  static Future<List<dynamic>> gastosPorFuncao({
+  /// Custos agrupados por função (via pagamentos + pedido).
+  /// Retorna: [{ nome, total_horas, total_valor }]
+  static Future<List<Map<String, dynamic>>> custosPorFuncao({
     String? dataInicio,
     String? dataFim,
   }) async {
     final raw = await supabase
         .from('pagamentos')
         .select(
-          'valor_hora, total_horas, valor_total, pessoas(pessoa_funcao(funcoes(nome)))',
+          'total_horas, valor_total, pedidos(data_inicio, funcoes(nome))',
         );
 
     final Map<String, Map<String, dynamic>> agrupado = {};
     for (final row in raw as List) {
-      final funcoes = (row['pessoas']?['pessoa_funcao'] as List?) ?? [];
-      final nomeFuncao = funcoes.isNotEmpty
-          ? funcoes.first['funcoes']
-                ? ['nome'] as String? ?? 'Sem função'
-                : 'Sem função'
-          : funcoes.first['funcoes']?['nome'] as String? ?? 'Sem função';
+      final dataRow = row['pedidos']?['data_inicio'] as String?;
+      if (dataInicio != null &&
+          dataRow != null &&
+          dataRow.compareTo(dataInicio) < 0) {
+        continue;
+      }
+      if (dataFim != null &&
+          dataRow != null &&
+          dataRow.compareTo(dataFim) > 0) {
+        continue;
+      }
 
-      agrupado.putIfAbsent(
-        nomeFuncao,
-        () => {
-          'nome': nomeFuncao,
-          'total_pedidos': 0,
-          'total_horas': 0.0,
-          'total_valor': 0.0,
-          'valor_hora': (row['valor_hora'] ?? 0).toDouble(),
-        },
-      );
-      agrupado[nomeFuncao]!['total_pedidos'] += 1;
-      agrupado[nomeFuncao]!['total_horas'] += (row['total_horas'] ?? 0)
-          .toDouble();
-      agrupado[nomeFuncao]!['total_valor'] += (row['valor_total'] ?? 0)
-          .toDouble();
-    }
-
-    return agrupado.values.toList()..sort(
-      (a, b) =>
-          (b['total_valor'] as double).compareTo(a['total_valor'] as double),
-    );
-  }
-
-  /// Gastos agrupados por gerente (quem criou o pedido).
-  /// Retorna: [{ nome, total_pedidos, total_horas, total_valor }]
-  static Future<List<dynamic>> gastosPorGerente({
-    String? dataInicio,
-    String? dataFim,
-  }) async {
-    final raw = await supabase
-        .from('pagamentos')
-        .select('total_horas, valor_total, pedidos(criado_por, pessoas(nome))');
-
-    final Map<String, Map<String, dynamic>> agrupado = {};
-    for (final row in raw as List) {
       final nome =
-          row['pedidos']?['pessoas']?['nome'] as String? ?? 'Desconhecido';
+          row['pedidos']?['funcoes']?['nome'] as String? ?? 'Sem função';
       agrupado.putIfAbsent(
         nome,
-        () => {
-          'nome': nome,
-          'total_pedidos': 0,
-          'total_horas': 0.0,
-          'total_valor': 0.0,
-        },
+        () => {'nome': nome, 'total_horas': 0.0, 'total_valor': 0.0},
       );
-      agrupado[nome]!['total_pedidos'] += 1;
       agrupado[nome]!['total_horas'] += (row['total_horas'] ?? 0).toDouble();
       agrupado[nome]!['total_valor'] += (row['valor_total'] ?? 0).toDouble();
     }
@@ -122,67 +157,37 @@ class RelatorioService {
     );
   }
 
-  /// Gastos agrupados por freelancer.
-  /// Retorna: [{ nome, total_pedidos, total_horas, total_valor }]
-  static Future<List<dynamic>> gastosPorFreelancer({
+  /// Evolução mensal de custos totais.
+  /// Retorna: [{ mes, total_valor }] ordenado cronologicamente.
+  static Future<List<Map<String, dynamic>>> evolucaoMensal({
     String? dataInicio,
     String? dataFim,
   }) async {
     final raw = await supabase
         .from('pagamentos')
-        .select('total_horas, valor_total, pessoas(nome)');
+        .select('valor_total, created_at');
 
-    final Map<String, Map<String, dynamic>> agrupado = {};
+    final Map<String, double> agrupado = {};
     for (final row in raw as List) {
-      final nome = row['pessoas']?['nome'] as String? ?? 'Desconhecido';
-      agrupado.putIfAbsent(
-        nome,
-        () => {
-          'nome': nome,
-          'total_pedidos': 0,
-          'total_horas': 0.0,
-          'total_valor': 0.0,
-        },
-      );
-      agrupado[nome]!['total_pedidos'] += 1;
-      agrupado[nome]!['total_horas'] += (row['total_horas'] ?? 0).toDouble();
-      agrupado[nome]!['total_valor'] += (row['valor_total'] ?? 0).toDouble();
-    }
-
-    return agrupado.values.toList()..sort(
-      (a, b) =>
-          (b['total_valor'] as double).compareTo(a['total_valor'] as double),
-    );
-  }
-
-  /// Evolução de custos por loja ao longo do tempo.
-  /// Retorna: [{ nome, mes, total_valor }]
-  static Future<List<dynamic>> evolucaoCustosLoja() async {
-    final raw = await supabase
-        .from('pagamentos')
-        .select('valor_total, created_at, pedidos(loja)');
-
-    final List<Map<String, dynamic>> resultado = [];
-    for (final row in raw as List) {
-      final loja = row['pedidos']?['loja'] as String? ?? 'Sem loja';
       final createdAt = DateTime.tryParse(row['created_at'] as String? ?? '');
-      final mes = createdAt != null
-          ? '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}'
-          : 'Desconhecido';
+      if (createdAt == null) continue;
 
-      resultado.add({
-        'nome': loja,
-        'mes': mes,
-        'total_valor': (row['valor_total'] ?? 0).toDouble(),
-      });
+      final mes =
+          '${createdAt.year}-${createdAt.month.toString().padLeft(2, '0')}';
+      if (dataInicio != null && mes.compareTo(dataInicio.substring(0, 7)) < 0) {
+        continue;
+      }
+      if (dataFim != null && mes.compareTo(dataFim.substring(0, 7)) > 0) {
+        continue;
+      }
+
+      agrupado[mes] =
+          (agrupado[mes] ?? 0.0) + (row['valor_total'] ?? 0).toDouble();
     }
 
-    resultado.sort((a, b) {
-      final lojaComp = (a['nome'] as String).compareTo(b['nome'] as String);
-      if (lojaComp != 0) return lojaComp;
-      return (a['mes'] as String).compareTo(b['mes'] as String);
-    });
-
-    return resultado;
+    return agrupado.entries
+        .map((e) => {'mes': e.key, 'total_valor': e.value})
+        .toList()
+      ..sort((a, b) => (a['mes'] as String).compareTo(b['mes'] as String));
   }
 }

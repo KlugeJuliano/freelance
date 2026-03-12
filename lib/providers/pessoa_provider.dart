@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
-import '../models/pessoa_model.dart';
-import '../services/supabase_client.dart';
+import 'package:freelance/models/pessoa_model.dart';
+import 'package:freelance/services/supabase_client.dart';
 
 class PessoaProvider extends ChangeNotifier {
   List<PessoaModel> _pessoas = [];
@@ -17,10 +17,16 @@ class PessoaProvider extends ChangeNotifier {
       _erro = null;
       notifyListeners();
 
-      final data = await supabase.from('pessoas').select().order('nome');
-      _pessoas = (data as List).map((row) => PessoaModel.fromMap(row)).toList();
+      final data = await supabase
+          .from('pessoas')
+          .select('*, pessoa_funcao(funcao_id)')
+          .order('nome');
+
+      _pessoas = (data as List)
+          .map((row) => PessoaModel.fromMap(row as Map<String, dynamic>))
+          .toList();
     } catch (e) {
-      _erro = "Erro ao carregar colaboradores";
+      _erro = 'Erro ao carregar colaboradores';
     } finally {
       _loading = false;
       notifyListeners();
@@ -33,6 +39,7 @@ class PessoaProvider extends ChangeNotifier {
       _erro = null;
       notifyListeners();
 
+      // 1. Insere a pessoa
       final response = await supabase
           .from('pessoas')
           .insert({
@@ -41,18 +48,24 @@ class PessoaProvider extends ChangeNotifier {
             'telefone': pessoa.telefone,
             'email': pessoa.email,
             'chave_pix': pessoa.chavePix,
-            // No Postgres, use o tipo JSONB ou Array
           })
-          .select()
+          .select('id')
           .single();
 
-      _pessoas.add(PessoaModel.fromMap(response));
-      _pessoas.sort((a, b) => a.nome.compareTo(b.nome));
-    } catch (e) {
-      print("ERRO SUPABASE: $e");
+      final pessoaId = response['id'] as String;
 
-      _erro = "Falha ao salvar colaborador.";
-    } finally {
+      // 2. Salva os vínculos de função na pessoa_funcao
+      if (pessoa.funcaoIds.isNotEmpty) {
+        final vinculos = pessoa.funcaoIds
+            .map((fid) => {'pessoa_id': pessoaId, 'funcao_id': fid})
+            .toList();
+        await supabase.from('pessoa_funcao').insert(vinculos);
+      }
+
+      // 3. Re-fetch para garantir dados consistentes com join
+      await fetchPessoas();
+    } catch (e) {
+      _erro = 'Falha ao salvar colaborador.';
       _loading = false;
       notifyListeners();
     }
@@ -60,11 +73,12 @@ class PessoaProvider extends ChangeNotifier {
 
   Future<void> removerPessoa(String id) async {
     try {
+      // ON DELETE CASCADE cuida dos vínculos em pessoa_funcao
       await supabase.from('pessoas').delete().eq('id', id);
       _pessoas.removeWhere((p) => p.pessoaId == id);
       notifyListeners();
     } catch (e) {
-      _erro = "Erro ao excluir.";
+      _erro = 'Erro ao excluir.';
       notifyListeners();
     }
   }

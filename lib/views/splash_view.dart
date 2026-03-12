@@ -58,7 +58,7 @@ class _SplashViewState extends State<SplashView>
           context.go('/rh/fila_pedidos');
           break;
         case 'diretoria':
-          context.go('/direcao/diretoria');
+          context.go('/direcao/relatorios');
           break;
         default:
           context.go('/login');

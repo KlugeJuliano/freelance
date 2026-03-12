@@ -76,13 +76,14 @@ final GoRouter _router = GoRouter(
       builder: (context, state) =>
           EscalacaoView(pedido: state.extra as PedidoModel),
     ),
-    GoRoute(
-      path: '/direcao/diretoria',
-      builder: (context, state) => const RelatoriosConsolidadosView(),
-    ),
+
     GoRoute(
       path: '/rh/cadastros/cadastro_funcoes',
       builder: (context, state) => const CadastroFuncoes(),
+    ),
+    GoRoute(
+      path: '/direcao/relatorios',
+      builder: (context, state) => const RelatoriosView(),
     ),
     GoRoute(
       path: '/rh/cadastros/cadastro_colaboradores',

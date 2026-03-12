@@ -28,9 +28,13 @@ class AppColors {
     switch (status) {
       case 'solicitado':
         return statusSolicitado;
+      case 'escalado':
+        return statusEmSelecao;
       case 'em_selecao':
         return statusEmSelecao;
       case 'aprovado':
+        return statusAprovado;
+      case 'em_andamento':
         return statusAprovado;
       case 'cancelado':
         return statusCancelado;

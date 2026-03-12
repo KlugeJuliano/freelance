@@ -3,51 +3,58 @@
 import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/services/supabase_client.dart';
 
-enum StatusPedido { solicitado, aprovado, cancelado, recusado, finalizado }
+enum StatusPedido {
+  solicitado,
+  escalado,
+  aprovado,
+  recusado,
+  em_andamento,
+  finalizado,
+  cancelado,
+}
 
 class StatusService {
-  Future<PedidoModel> aprovarPedido(PedidoModel pedido) async {
-    final statusAtual = StatusPedido.values.byName(pedido.status);
-
-    if (statusAtual != StatusPedido.solicitado) {
-      throw Exception('Pedido não pode ser aprovado');
-    }
-
-    return await _atualizarStatus(pedido, StatusPedido.aprovado);
-  }
-
+  /// solicitado → cancelado (gerente)
   Future<PedidoModel> cancelarPedido(PedidoModel pedido) async {
-    final statusAtual = StatusPedido.values.byName(pedido.status);
-
-    if (statusAtual != StatusPedido.solicitado) {
-      throw Exception('Este pedido não pode ser cancelado');
-    }
-
-    return await _atualizarStatus(pedido, StatusPedido.cancelado);
+    _validar(pedido, de: StatusPedido.solicitado);
+    return _atualizar(pedido, StatusPedido.cancelado);
   }
 
-  // Pedido só pode ser recusado depois que foi aprovado pelo RH
+  /// solicitado → escalado (RH — via EscalacaoService.finalizar)
+  /// escalado → aprovado (gerente)
+  Future<PedidoModel> aprovarPedido(PedidoModel pedido) async {
+    _validar(pedido, de: StatusPedido.escalado);
+    return _atualizar(pedido, StatusPedido.aprovado);
+  }
+
+  /// escalado → recusado (gerente devolve ao RH)
   Future<PedidoModel> recusarPedido(PedidoModel pedido) async {
-    final statusAtual = StatusPedido.values.byName(pedido.status);
-
-    if (statusAtual != StatusPedido.aprovado) {
-      throw Exception('Este pedido não pode ser recusado');
-    }
-
-    return await _atualizarStatus(pedido, StatusPedido.recusado);
+    _validar(pedido, de: StatusPedido.escalado);
+    return _atualizar(pedido, StatusPedido.recusado);
   }
 
+  /// aprovado → em_andamento (gerente confirma início)
+  Future<PedidoModel> iniciarJornada(PedidoModel pedido) async {
+    _validar(pedido, de: StatusPedido.aprovado);
+    return _atualizar(pedido, StatusPedido.em_andamento);
+  }
+
+  /// em_andamento → finalizado (gerente encerra)
   Future<PedidoModel> finalizarPedido(PedidoModel pedido) async {
-    final statusAtual = StatusPedido.values.byName(pedido.status);
-
-    if (statusAtual != StatusPedido.aprovado) {
-      throw Exception('Este pedido não pode ser finalizado');
-    }
-
-    return await _atualizarStatus(pedido, StatusPedido.finalizado);
+    _validar(pedido, de: StatusPedido.em_andamento);
+    return _atualizar(pedido, StatusPedido.finalizado);
   }
 
-  Future<PedidoModel> _atualizarStatus(
+  void _validar(PedidoModel pedido, {required StatusPedido de}) {
+    final atual = StatusPedido.values.byName(pedido.status);
+    if (atual != de) {
+      throw Exception(
+        'Ação inválida: pedido está "${pedido.status}", esperado "${de.name}"',
+      );
+    }
+  }
+
+  Future<PedidoModel> _atualizar(
     PedidoModel pedido,
     StatusPedido novoStatus,
   ) async {
@@ -55,7 +62,6 @@ class StatusService {
         .from('pedidos')
         .update({'status': novoStatus.name})
         .eq('id', pedido.id);
-
     return pedido.copyWith(status: novoStatus.name);
   }
 }

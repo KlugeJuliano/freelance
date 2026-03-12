@@ -40,6 +40,7 @@ dependencies:
   intl:  
   supabase_flutter: ^2.12.0
   flutter_dotenv: ^6.0.0
+  fl_chart: ^0.69.0
 
 
 
