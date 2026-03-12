@@ -1,7 +1,7 @@
 // lib/models/freelancer_escalado_model.dart
 
 class FreelancerEscaladoModel {
-  final String freelancerId;
+  final String pessoaId;
   final String nome;
   final String? cpf;
   final String status;
@@ -11,7 +11,7 @@ class FreelancerEscaladoModel {
   final double? valorTotal;
 
   FreelancerEscaladoModel({
-    required this.freelancerId,
+    required this.pessoaId,
     required this.nome,
     this.cpf,
     required this.status,
@@ -25,7 +25,7 @@ class FreelancerEscaladoModel {
     // O Supabase retorna join achatado — sem 'pivot'
     // Esperamos: pessoas.id, pessoas.nome, pessoas.cpf + campos da escalacao
     return FreelancerEscaladoModel(
-      freelancerId: map['pessoa_id'] as String,
+      pessoaId: map['pessoa_id'] as String,
       nome: map['pessoas']?['nome'] as String? ?? map['nome'] as String? ?? '',
       cpf: map['pessoas']?['cpf'] as String?,
       status: map['status'] as String? ?? 'escalado',
@@ -46,7 +46,7 @@ class FreelancerEscaladoModel {
 
   FreelancerEscaladoModel copyWith({String? status}) {
     return FreelancerEscaladoModel(
-      freelancerId: freelancerId,
+      pessoaId: pessoaId,
       nome: nome,
       cpf: cpf,
       status: status ?? this.status,
