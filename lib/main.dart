@@ -7,17 +7,18 @@ import 'package:freelance/providers/loja_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
 import 'package:freelance/providers/pessoa_provider.dart';
 import 'package:freelance/theme/app_theme.dart';
-import 'package:freelance/views/direcao/relatorios_consolidados_view.dart';
 import 'package:freelance/views/login_view.dart';
 import 'package:freelance/views/manager/new_request_view.dart';
 import 'package:freelance/views/manager/jornada_view.dart';
 import 'package:freelance/views/manager/requests_view.dart';
+import 'package:freelance/views/relatorios_view.dart';
 import 'package:freelance/views/rh/cadastros/colaboradores_view.dart';
 import 'package:freelance/views/rh/cadastros/funcoes_view.dart';
 import 'package:freelance/views/rh/escalacao_view.dart';
 import 'package:freelance/views/rh/fila_pedidos_view.dart';
 import 'package:freelance/views/splash_view.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -32,6 +33,8 @@ void main() async {
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+
+  await initializeDateFormatting('pt_BR');
 
   runApp(
     MultiProvider(
@@ -76,7 +79,6 @@ final GoRouter _router = GoRouter(
       builder: (context, state) =>
           EscalacaoView(pedido: state.extra as PedidoModel),
     ),
-
     GoRoute(
       path: '/rh/cadastros/cadastro_funcoes',
       builder: (context, state) => const CadastroFuncoes(),

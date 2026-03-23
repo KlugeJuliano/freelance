@@ -156,7 +156,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                             labelText: 'Loja',
                             border: OutlineInputBorder(),
                           ),
-                          value: _lojaSelecionada,
+                          initialValue: _lojaSelecionada,
                           hint: Text(
                             lojas.isEmpty
                                 ? 'Carregando lojas...'
@@ -184,7 +184,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                             labelText: 'Função',
                             border: OutlineInputBorder(),
                           ),
-                          value: _funcaoSelecionada,
+                          initialValue: _funcaoSelecionada,
                           hint: Text(
                             funcoes.isEmpty
                                 ? 'Nenhuma função cadastrada'

@@ -59,7 +59,7 @@ class PedidoProvider extends ChangeNotifier {
           .select()
           .single();
 
-      final novoPedido = PedidoModel.fromMap(data as Map<String, dynamic>);
+      final novoPedido = PedidoModel.fromMap(data);
       _pedidos.insert(0, novoPedido);
       return true;
     } catch (e) {
@@ -74,7 +74,10 @@ class PedidoProvider extends ChangeNotifier {
   Future<bool> atualizarStatus(String id, String novoStatus) async {
     _erro = null;
     try {
-      await supabase.from('pedidos').update({'status': novoStatus}).eq('id', id);
+      await supabase
+          .from('pedidos')
+          .update({'status': novoStatus})
+          .eq('id', id);
 
       final index = _pedidos.indexWhere((p) => p.id == id);
       if (index != -1) {
