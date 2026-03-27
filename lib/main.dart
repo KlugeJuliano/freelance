@@ -55,13 +55,14 @@ void main() async {
 GoRouter _buildRouter(AuthProvider auth) => GoRouter(
   refreshListenable: auth, // re-avalia redirect quando auth muda
   redirect: (context, state) {
-    if (auth.status == AuthStatus.idle) return null; // ainda carregando
+    if (auth.status == AuthStatus.idle || auth.status == AuthStatus.loading)
+      return null;
 
     final logado = auth.autenticado;
     final rotasPublicas = ['/login', '/cadastro_empresa', '/'];
     final naRotaPublica = rotasPublicas.contains(state.matchedLocation);
 
-    if (!logado && !naRotaPublica) return '/cadastro_empresa';
+    if (!logado && !naRotaPublica) return '/login';
     if (logado && naRotaPublica) return '/rh/fila_pedidos';
     return null;
   },
@@ -105,61 +106,26 @@ GoRouter _buildRouter(AuthProvider auth) => GoRouter(
   ],
 );
 
-class MyApp extends StatefulWidget {
+class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  late final GoRouter _router;
-
-  @override
-  void initState() {
-    super.initState();
-    // Obtemos a referência uma vez. O GoRouter usará o refreshListenable
-    // para reagir a mudanças no AuthProvider.
-    final auth = context.read<AuthProvider>();
-    _router = _buildRouter(auth);
-  }
-
-  @override
   Widget build(BuildContext context) {
-    // Para inicializar os outros providers, ainda podemos observar o AuthProvider
     final auth = context.watch<AuthProvider>();
 
     // Inicializa providers com empresaId assim que autenticar
     if (auth.autenticado && auth.empresaId != null) {
       final id = auth.empresaId!;
-      // Usamos microtask para evitar erros de 'build' ao chamar outros providers
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.read<PessoaProvider>().inicializar(id);
-          context.read<FuncaoProvider>().inicializar(id);
-          context.read<PedidoProvider>().inicializar(id);
-          context.read<EscalacaoProvider>().inicializar(id);
-          context.read<LojaProvider>().inicializar(id);
-        }
-      });
-    } else if (!auth.autenticado) {
-      // Limpa os providers ao deslogar
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.read<PessoaProvider>().limpar();
-          context.read<FuncaoProvider>().limpar();
-          context.read<PedidoProvider>().limpar();
-          context.read<EscalacaoProvider>().limpar();
-          context.read<LojaProvider>().limpar();
-        }
-      });
+      context.read<PessoaProvider>().inicializar(id);
+      context.read<FuncaoProvider>().inicializar(id);
+      context.read<PedidoProvider>().inicializar(id);
+      context.read<EscalacaoProvider>().inicializar(id);
     }
 
     return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
       title: 'Freelance App',
       theme: AppTheme.data,
-      routerConfig: _router,
+      routerConfig: _buildRouter(auth),
     );
   }
 }

@@ -50,31 +50,19 @@ class AuthProvider extends ChangeNotifier {
           .from('empresas')
           .select()
           .eq('id', userId)
-          .maybeSingle(); // 👈 ESSENCIAL
-
-      if (data == null) {
-        _empresa = null;
-        _status = AuthStatus.unauthenticated; // ou cria um novo estado
-        return;
-      }
-
+          .single();
       _empresa = EmpresaModel.fromMap(data);
       _status = AuthStatus.authenticated;
     } catch (e) {
       _status = AuthStatus.error;
       _erro = 'Erro ao carregar dados da empresa.';
     }
-
     notifyListeners();
   }
 
   // Usado pela SplashView
   Future<void> verificarLogin() async {
-    _status = AuthStatus.loading;
-    notifyListeners();
-
     final session = _supabase.auth.currentSession;
-
     if (session != null) {
       await _carregarEmpresa(session.user.id);
     } else {
@@ -121,12 +109,16 @@ class AuthProvider extends ChangeNotifier {
       final user = response.user;
       if (user == null) throw Exception('Falha ao criar usuário.');
 
-      await _supabase.from('empresas').insert({
-        'id': user.id,
-        'nome': nome,
-        'cnpj': cnpj,
-        'email_admin': email,
-      });
+      // Usa function security definer para bypassar RLS no insert inicial
+      await _supabase.rpc(
+        'cadastrar_empresa',
+        params: {
+          'p_id': user.id,
+          'p_nome': nome,
+          'p_cnpj': cnpj,
+          'p_email_admin': email,
+        },
+      );
 
       await _supabase.auth.updateUser(
         UserAttributes(data: {'empresa_id': user.id}),
