@@ -1,32 +1,52 @@
 import 'package:flutter/foundation.dart';
 import 'package:freelance/models/pessoa_model.dart';
-import 'package:freelance/services/supabase_client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PessoaProvider extends ChangeNotifier {
+  final _supabase = Supabase.instance.client;
+
   List<PessoaModel> _pessoas = [];
   bool _loading = false;
   String? _erro;
+  String? _empresaId;
 
   List<PessoaModel> get pessoas => _pessoas;
   bool get loading => _loading;
   String? get erro => _erro;
 
+  void inicializar(String empresaId) {
+    if (_empresaId == empresaId) return;
+    _empresaId = empresaId;
+    _pessoas = [];
+    _escutar();
+  }
+
+  void _escutar() {
+    _loading = true;
+    notifyListeners();
+
+    _supabase
+        .from('pessoas')
+        .stream(primaryKey: ['id'])
+        .eq('empresa_id', _empresaId!)
+        .listen((rows) {
+          _pessoas = rows.map(PessoaModel.fromMap).toList();
+          _loading = false;
+          notifyListeners();
+        });
+  }
+
+  // Mantido para compatibilidade com initState das views
   Future<void> fetchPessoas() async {
+    if (_empresaId == null) return;
+    _loading = true;
+    notifyListeners();
     try {
-      _loading = true;
-      _erro = null;
-      notifyListeners();
-
-      final data = await supabase
+      final data = await _supabase
           .from('pessoas')
-          .select('*, pessoa_funcao(funcao_id)')
-          .order('nome');
-
-      _pessoas = (data as List)
-          .map((row) => PessoaModel.fromMap(row as Map<String, dynamic>))
-          .toList();
-    } catch (e) {
-      _erro = 'Erro ao carregar colaboradores';
+          .select()
+          .eq('empresa_id', _empresaId!);
+      _pessoas = (data as List).map((r) => PessoaModel.fromMap(r)).toList();
     } finally {
       _loading = false;
       notifyListeners();
@@ -34,52 +54,41 @@ class PessoaProvider extends ChangeNotifier {
   }
 
   Future<void> adicionarPessoa(PessoaModel pessoa) async {
+    if (_empresaId == null) return;
+    _erro = null;
+    _loading = true;
+    notifyListeners();
     try {
-      _loading = true;
-      _erro = null;
-      notifyListeners();
-
-      // 1. Insere a pessoa
-      final response = await supabase
-          .from('pessoas')
-          .insert({
-            'nome': pessoa.nome,
-            'cpf': pessoa.cpf,
-            'telefone': pessoa.telefone,
-            'email': pessoa.email,
-            'chave_pix': pessoa.chavePix,
-          })
-          .select('id')
-          .single();
-
-      final pessoaId = response['id'] as String;
-
-      // 2. Salva os vínculos de função na pessoa_funcao
-      if (pessoa.funcaoIds.isNotEmpty) {
-        final vinculos = pessoa.funcaoIds
-            .map((fid) => {'pessoa_id': pessoaId, 'funcao_id': fid})
-            .toList();
-        await supabase.from('pessoa_funcao').insert(vinculos);
-      }
-
-      // 3. Re-fetch para garantir dados consistentes com join
-      await fetchPessoas();
+      await _supabase.from('pessoas').insert({
+        'empresa_id': _empresaId,
+        'nome': pessoa.nome,
+        'cpf': pessoa.cpf,
+        'telefone': pessoa.telefone,
+        'email': pessoa.email,
+        'chave_pix': pessoa.chavePix,
+        'funcao_ids': pessoa.funcaoIds,
+      });
     } catch (e) {
-      _erro = 'Falha ao salvar colaborador.';
+      _erro = 'Erro ao salvar colaborador: $e';
+    } finally {
       _loading = false;
       notifyListeners();
     }
   }
 
   Future<void> removerPessoa(String id) async {
+    _erro = null;
     try {
-      // ON DELETE CASCADE cuida dos vínculos em pessoa_funcao
-      await supabase.from('pessoas').delete().eq('id', id);
-      _pessoas.removeWhere((p) => p.pessoaId == id);
-      notifyListeners();
+      await _supabase.from('pessoas').delete().eq('id', id);
     } catch (e) {
-      _erro = 'Erro ao excluir.';
+      _erro = 'Erro ao remover colaborador: $e';
       notifyListeners();
     }
+  }
+
+  void limpar() {
+    _pessoas = [];
+    _empresaId = null;
+    notifyListeners();
   }
 }

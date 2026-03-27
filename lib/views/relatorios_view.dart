@@ -54,9 +54,8 @@ class _RelatoriosViewState extends State<RelatoriosView>
     super.dispose();
   }
 
-  String? get _inicioStr =>
-      _dataInicio != null ? _dataInicio!.toIso8601String() : null;
-  String? get _fimStr => _dataFim != null ? _dataFim!.toIso8601String() : null;
+  String? get _inicioStr => _dataInicio?.toIso8601String();
+  String? get _fimStr => _dataFim?.toIso8601String();
 
   Future<void> _carregar() async {
     setState(() {
@@ -98,7 +97,7 @@ class _RelatoriosViewState extends State<RelatoriosView>
         0,
         (sum, e) => sum + (e['total_horas'] as double),
       );
-      final totalPedidos = (results[0] as List<Map<String, dynamic>>).fold<int>(
+      final totalPedidos = (results[0]).fold<int>(
         0,
         (sum, e) => sum + (e['total_pedidos'] as int),
       );
@@ -139,7 +138,7 @@ class _RelatoriosViewState extends State<RelatoriosView>
             surface: AppColors.card,
             onSurface: AppColors.textPrimary,
           ),
-          dialogBackgroundColor: AppColors.card,
+          dialogTheme: DialogThemeData(backgroundColor: AppColors.card),
         ),
         child: child!,
       ),

@@ -1,97 +1,170 @@
-// lib/providers/auth_provider.dart
-
 import 'package:flutter/foundation.dart';
+import 'package:freelance/models/empresa_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/supabase_client.dart';
+
+enum AuthStatus { idle, loading, authenticated, unauthenticated, error }
 
 class AuthProvider extends ChangeNotifier {
-  User? _user;
-  String? _role;
-  bool _loading = false;
+  final _supabase = Supabase.instance.client;
+
+  AuthStatus _status = AuthStatus.idle;
+  EmpresaModel? _empresa;
   String? _erro;
 
-  User? get user => _user;
-  bool get isLogado => _user != null;
-  String? get role => _role;
-  bool get loading => _loading;
+  AuthStatus get status => _status;
+  EmpresaModel? get empresa => _empresa;
   String? get erro => _erro;
+  bool get loading => _status == AuthStatus.loading;
+
+  // Getters que as views usam
+  String? get empresaId => _empresa?.id;
+  bool get autenticado => _status == AuthStatus.authenticated;
+  bool get isLogado => autenticado;
+  String? get role => _supabase.auth.currentUser?.userMetadata?['role'];
+  User? get user => _supabase.auth.currentUser;
 
   AuthProvider() {
-    supabase.auth.onAuthStateChange.listen((data) {
-      _user = data.session?.user;
-      if (_user != null) {
-        _role = _user!.userMetadata?['role'] as String?;
+    _supabase.auth.onAuthStateChange.listen((data) {
+      final session = data.session;
+      if (session == null) {
+        _empresa = null;
+        _status = AuthStatus.unauthenticated;
+        notifyListeners();
       } else {
-        _role = null;
+        _carregarEmpresa(session.user.id);
       }
-      notifyListeners();
     });
+
+    // Verifica sessão existente
+    final session = _supabase.auth.currentSession;
+    if (session != null) {
+      _carregarEmpresa(session.user.id);
+    } else {
+      _status = AuthStatus.unauthenticated;
+    }
   }
 
-  /// Chamado pelo SplashView — restaura sessão persistida e carrega o role.
-  Future<void> verificarLogin() async {
-    _user = supabase.auth.currentUser;
-    if (_user != null) {
-      _role = _user!.userMetadata?['role'] as String?;
+  Future<void> _carregarEmpresa(String userId) async {
+    try {
+      final data = await _supabase
+          .from('empresas')
+          .select()
+          .eq('id', userId)
+          .maybeSingle(); // 👈 ESSENCIAL
+
+      if (data == null) {
+        _empresa = null;
+        _status = AuthStatus.unauthenticated; // ou cria um novo estado
+        return;
+      }
+
+      _empresa = EmpresaModel.fromMap(data);
+      _status = AuthStatus.authenticated;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _erro = 'Erro ao carregar dados da empresa.';
     }
+
     notifyListeners();
   }
 
-  /// Login com email e senha. Retorna true em caso de sucesso.
-  Future<bool> login(String email, String password) async {
-    _loading = true;
+  // Usado pela SplashView
+  Future<void> verificarLogin() async {
+    _status = AuthStatus.loading;
+    notifyListeners();
+
+    final session = _supabase.auth.currentSession;
+
+    if (session != null) {
+      await _carregarEmpresa(session.user.id);
+    } else {
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+    }
+  }
+
+  // Retorna true/false para a LoginView
+  Future<bool> login(String email, String senha) async {
+    _status = AuthStatus.loading;
     _erro = null;
     notifyListeners();
 
     try {
-      final response = await supabase.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
-      _user = response.user;
-      _role = _user?.userMetadata?['role'] as String?;
+      await _supabase.auth.signInWithPassword(email: email, password: senha);
+      // onAuthStateChange cuida do _carregarEmpresa
       return true;
     } on AuthException catch (e) {
-      _erro = e.message;
-      return false;
-    } catch (e) {
-      _erro = 'Erro ao conectar. Tente novamente.';
-      return false;
-    } finally {
-      _loading = false;
+      _status = AuthStatus.error;
+      _erro = _traduzirErro(e.message);
       notifyListeners();
+      return false;
     }
   }
 
-  /// Cadastro de novo usuário.
-  /// [role] deve ser 'gerente', 'rh' ou 'diretoria'.
-  Future<void> signUp(String email, String password, String role) async {
-    _loading = true;
+  Future<void> cadastrarEmpresa({
+    required String nome,
+    required String cnpj,
+    required String email,
+    required String senha,
+  }) async {
+    _status = AuthStatus.loading;
     _erro = null;
     notifyListeners();
 
     try {
-      final response = await supabase.auth.signUp(
+      final response = await _supabase.auth.signUp(
         email: email,
-        password: password,
-        data: {'role': role},
+        password: senha,
+        data: {'empresa_id': null},
       );
-      _user = response.user;
-      _role = role;
+
+      final user = response.user;
+      if (user == null) throw Exception('Falha ao criar usuário.');
+
+      await _supabase.from('empresas').insert({
+        'id': user.id,
+        'nome': nome,
+        'cnpj': cnpj,
+        'email_admin': email,
+      });
+
+      await _supabase.auth.updateUser(
+        UserAttributes(data: {'empresa_id': user.id}),
+      );
+
+      _empresa = EmpresaModel(
+        id: user.id,
+        nome: nome,
+        cnpj: cnpj,
+        emailAdmin: email,
+      );
+      _status = AuthStatus.authenticated;
     } on AuthException catch (e) {
-      _erro = e.message;
-    } finally {
-      _loading = false;
-      notifyListeners();
+      _status = AuthStatus.error;
+      _erro = _traduzirErro(e.message);
+    } on PostgrestException catch (e) {
+      _status = AuthStatus.error;
+      _erro = e.code == '23505'
+          ? 'CNPJ já cadastrado.'
+          : 'Erro ao salvar empresa: ${e.message}';
+    } catch (e) {
+      _status = AuthStatus.error;
+      _erro = e.toString();
     }
+    notifyListeners();
   }
 
-  /// Logout.
   Future<void> signOut() async {
-    await supabase.auth.signOut();
-    _user = null;
-    _role = null;
-    _erro = null;
-    notifyListeners();
+    await _supabase.auth.signOut();
+  }
+
+  String _traduzirErro(String msg) {
+    if (msg.contains('already registered')) return 'E-mail já cadastrado.';
+    if (msg.contains('Invalid login')) return 'E-mail ou senha incorretos.';
+    if (msg.contains('Email not confirmed'))
+      return 'Confirme seu e-mail antes de entrar.';
+    if (msg.contains('too many requests'))
+      return 'Muitas tentativas. Aguarde alguns minutos.';
+    return msg;
   }
 }

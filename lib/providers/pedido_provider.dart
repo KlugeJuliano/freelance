@@ -1,5 +1,3 @@
-// lib/providers/pedido_provider.dart
-
 import 'package:flutter/foundation.dart';
 import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/services/supabase_client.dart';
@@ -8,6 +6,7 @@ class PedidoProvider extends ChangeNotifier {
   List<PedidoModel> _pedidos = [];
   bool _loading = false;
   String? _erro;
+  String? _empresaId;
 
   List<PedidoModel> get pedidos => _pedidos;
   bool get loading => _loading;
@@ -16,7 +15,14 @@ class PedidoProvider extends ChangeNotifier {
   List<PedidoModel> get pedidosPendentes =>
       _pedidos.where((p) => p.status == 'solicitado').toList();
 
+  void inicializar(String empresaId) {
+    if (_empresaId == empresaId) return;
+    _empresaId = empresaId;
+    fetchPedidos();
+  }
+
   Future<void> fetchPedidos() async {
+    if (_empresaId == null) return;
     _loading = true;
     _erro = null;
     notifyListeners();
@@ -25,6 +31,7 @@ class PedidoProvider extends ChangeNotifier {
       final data = await supabase
           .from('pedidos')
           .select()
+          .eq('empresa_id', _empresaId!)
           .order('created_at', ascending: false);
 
       _pedidos = (data as List)
@@ -39,6 +46,7 @@ class PedidoProvider extends ChangeNotifier {
   }
 
   Future<bool> adicionarPedido(PedidoModel pedido) async {
+    if (_empresaId == null) return false;
     _loading = true;
     _erro = null;
     notifyListeners();
@@ -47,6 +55,7 @@ class PedidoProvider extends ChangeNotifier {
       final data = await supabase
           .from('pedidos')
           .insert({
+            'empresa_id': _empresaId,
             'loja_id': pedido.lojaId,
             'funcao_id': pedido.funcaoId,
             'gerente_id': pedido.gerenteId,
@@ -89,5 +98,11 @@ class PedidoProvider extends ChangeNotifier {
       _erro = 'Erro ao atualizar status: $e';
       return false;
     }
+  }
+
+  void limpar() {
+    _pedidos = [];
+    _empresaId = null;
+    notifyListeners();
   }
 }

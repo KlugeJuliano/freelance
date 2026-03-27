@@ -80,6 +80,8 @@ class _CadastroColaboradoresState extends State<CadastroColaboradores> {
       email: _emailController.text.trim(),
       chavePix: _pixController.text.trim(),
       funcaoIds: _funcoesSelecionadas.toList(),
+      id: '',
+      empresaId: '',
     );
 
     await provider.adicionarPessoa(novoColaborador);

@@ -7,6 +7,7 @@ import 'package:freelance/providers/loja_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
 import 'package:freelance/providers/pessoa_provider.dart';
 import 'package:freelance/theme/app_theme.dart';
+import 'package:freelance/views/cadastro_empresa_view.dart';
 import 'package:freelance/views/login_view.dart';
 import 'package:freelance/views/manager/new_request_view.dart';
 import 'package:freelance/views/manager/jornada_view.dart';
@@ -21,7 +22,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -51,17 +51,31 @@ void main() async {
   );
 }
 
-final GoRouter _router = GoRouter(
+// Router separado em função para receber o AuthProvider
+GoRouter _buildRouter(AuthProvider auth) => GoRouter(
+  refreshListenable: auth, // re-avalia redirect quando auth muda
+  redirect: (context, state) {
+    if (auth.status == AuthStatus.idle) return null; // ainda carregando
+
+    final logado = auth.autenticado;
+    final rotasPublicas = ['/login', '/cadastro_empresa', '/'];
+    final naRotaPublica = rotasPublicas.contains(state.matchedLocation);
+
+    if (!logado && !naRotaPublica) return '/cadastro_empresa';
+    if (logado && naRotaPublica) return '/rh/fila_pedidos';
+    return null;
+  },
   routes: [
-    GoRoute(path: '/', builder: (context, state) => const SplashView()),
-    GoRoute(path: '/login', builder: (context, state) => const LoginView()),
+    GoRoute(path: '/', builder: (_, __) => const SplashView()),
+    GoRoute(path: '/login', builder: (_, __) => const LoginView()),
     GoRoute(
-      path: '/manager/gerente',
-      builder: (context, state) => const RequestsView(),
+      path: '/cadastro_empresa',
+      builder: (_, __) => const CadastroEmpresaView(),
     ),
+    GoRoute(path: '/manager/gerente', builder: (_, __) => const RequestsView()),
     GoRoute(
       path: '/manager/new_request',
-      builder: (context, state) => const NovaSolicitacao(),
+      builder: (_, __) => const NovaSolicitacao(),
     ),
     GoRoute(
       path: '/manager/jornada_view/:pedidoId',
@@ -70,10 +84,7 @@ final GoRouter _router = GoRouter(
         return JornadaView(pedidoId: pedidoId);
       },
     ),
-    GoRoute(
-      path: '/rh/fila_pedidos',
-      builder: (context, state) => FilaPedidosView(),
-    ),
+    GoRoute(path: '/rh/fila_pedidos', builder: (_, __) => FilaPedidosView()),
     GoRoute(
       path: '/rh/escala_pedidos/:id',
       builder: (context, state) =>
@@ -81,25 +92,71 @@ final GoRouter _router = GoRouter(
     ),
     GoRoute(
       path: '/rh/cadastros/cadastro_funcoes',
-      builder: (context, state) => const CadastroFuncoes(),
+      builder: (_, __) => const CadastroFuncoes(),
     ),
     GoRoute(
       path: '/direcao/relatorios',
-      builder: (context, state) => const RelatoriosView(),
+      builder: (_, __) => const RelatoriosView(),
     ),
     GoRoute(
       path: '/rh/cadastros/cadastro_colaboradores',
-      builder: (context, state) => const CadastroColaboradores(),
+      builder: (_, __) => const CadastroColaboradores(),
     ),
   ],
 );
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final GoRouter _router;
+
+  @override
+  void initState() {
+    super.initState();
+    // Obtemos a referência uma vez. O GoRouter usará o refreshListenable
+    // para reagir a mudanças no AuthProvider.
+    final auth = context.read<AuthProvider>();
+    _router = _buildRouter(auth);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Para inicializar os outros providers, ainda podemos observar o AuthProvider
+    final auth = context.watch<AuthProvider>();
+
+    // Inicializa providers com empresaId assim que autenticar
+    if (auth.autenticado && auth.empresaId != null) {
+      final id = auth.empresaId!;
+      // Usamos microtask para evitar erros de 'build' ao chamar outros providers
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<PessoaProvider>().inicializar(id);
+          context.read<FuncaoProvider>().inicializar(id);
+          context.read<PedidoProvider>().inicializar(id);
+          context.read<EscalacaoProvider>().inicializar(id);
+          context.read<LojaProvider>().inicializar(id);
+        }
+      });
+    } else if (!auth.autenticado) {
+      // Limpa os providers ao deslogar
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<PessoaProvider>().limpar();
+          context.read<FuncaoProvider>().limpar();
+          context.read<PedidoProvider>().limpar();
+          context.read<EscalacaoProvider>().limpar();
+          context.read<LojaProvider>().limpar();
+        }
+      });
+    }
+
     return MaterialApp.router(
+      debugShowCheckedModeBanner: false,
       title: 'Freelance App',
       theme: AppTheme.data,
       routerConfig: _router,

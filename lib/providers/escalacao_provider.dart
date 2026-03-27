@@ -1,5 +1,3 @@
-// lib/providers/escalacao_provider.dart
-
 import 'package:flutter/foundation.dart';
 import 'package:freelance/models/freelancer_escalado_model.dart';
 import 'package:freelance/services/escalacao_service.dart';
@@ -8,10 +6,18 @@ class EscalacaoProvider extends ChangeNotifier {
   List<FreelancerEscaladoModel> _escalados = [];
   bool _loading = false;
   String? _erro;
+  String? _empresaId;
 
   List<FreelancerEscaladoModel> get escalados => _escalados;
   bool get loading => _loading;
   String? get erro => _erro;
+
+  // Chamado pelo main.dart após login — passa empresaId para o service
+  void inicializar(String empresaId) {
+    if (_empresaId == empresaId) return;
+    _empresaId = empresaId;
+    EscalacaoService.empresaId = empresaId;
+  }
 
   Future<void> carregarEscalados(String pedidoId) async {
     _loading = true;
@@ -63,6 +69,13 @@ class EscalacaoProvider extends ChangeNotifier {
 
   void limparErro() {
     _erro = null;
+    notifyListeners();
+  }
+
+  void limpar() {
+    _escalados = [];
+    _empresaId = null;
+    EscalacaoService.empresaId = null;
     notifyListeners();
   }
 }

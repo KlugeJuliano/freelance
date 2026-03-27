@@ -1,54 +1,37 @@
-// lib/models/pessoa_model.dart
-
 class PessoaModel {
-  final String pessoaId;
+  final String id;
+  final String empresaId;
   final String nome;
   final String? cpf;
   final String? telefone;
   final String? email;
   final String? chavePix;
   final List<String> funcaoIds;
-  final bool ativo;
 
-  PessoaModel({
-    required this.pessoaId,
+  const PessoaModel({
+    required this.id,
+    required this.empresaId,
     required this.nome,
     this.cpf,
     this.telefone,
     this.email,
     this.chavePix,
     this.funcaoIds = const [],
-    this.ativo = true,
+    required String pessoaId,
   });
 
-  factory PessoaModel.fromMap(Map<String, dynamic> map) {
-    return PessoaModel(
-      pessoaId: map['id'] as String,
-      nome: map['nome'] as String,
-      cpf: map['cpf'] as String?,
-      telefone: map['telefone'] as String?,
-      email: map['email'] as String?,
-      chavePix: map['chave_pix'] as String?,
-      ativo: map['ativo'] as bool? ?? true,
-      // Supabase retorna join como: pessoa_funcao: [{ funcao_id: '...' }]
-      funcaoIds:
-          (map['pessoa_funcao'] as List?)
-              ?.map((f) => f['funcao_id'].toString())
-              .toList() ??
-          [],
-    );
-  }
+  // Alias para compatibilidade com as views existentes
+  String get pessoaId => id;
 
-  PessoaModel copyWith({bool? ativo}) {
-    return PessoaModel(
-      pessoaId: pessoaId,
-      nome: nome,
-      cpf: cpf,
-      telefone: telefone,
-      email: email,
-      chavePix: chavePix,
-      funcaoIds: funcaoIds,
-      ativo: ativo ?? this.ativo,
-    );
-  }
+  factory PessoaModel.fromMap(Map<String, dynamic> map) => PessoaModel(
+    id: map['id'] ?? '',
+    empresaId: map['empresa_id'] ?? '',
+    nome: map['nome'],
+    cpf: map['cpf'],
+    telefone: map['telefone'],
+    email: map['email'],
+    chavePix: map['chave_pix'],
+    funcaoIds: List<String>.from(map['funcao_ids'] ?? []),
+    pessoaId: '',
+  );
 }

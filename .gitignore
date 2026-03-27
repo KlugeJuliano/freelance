@@ -51,3 +51,5 @@ app.*.map.json
 /linux
 /android
 /ios
+
+android/key.propertiess
