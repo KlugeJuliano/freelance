@@ -10,6 +10,7 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus _status = AuthStatus.idle;
   EmpresaModel? _empresa;
   String? _erro;
+  String? _role;
 
   AuthStatus get status => _status;
   EmpresaModel? get empresa => _empresa;
@@ -20,7 +21,7 @@ class AuthProvider extends ChangeNotifier {
   String? get empresaId => _empresa?.id;
   bool get autenticado => _status == AuthStatus.authenticated;
   bool get isLogado => autenticado;
-  String? get role => _supabase.auth.currentUser?.userMetadata?['role'];
+  String? get role => _role;
   User? get user => _supabase.auth.currentUser;
 
   AuthProvider() {
@@ -46,16 +47,44 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> _carregarEmpresa(String userId) async {
     try {
-      final data = await _supabase
+      // Tenta carregar como admin (cadastrou a empresa)
+      final empresaData = await _supabase
           .from('empresas')
           .select()
           .eq('id', userId)
-          .single();
-      _empresa = EmpresaModel.fromMap(data);
-      _status = AuthStatus.authenticated;
+          .maybeSingle();
+
+      if (empresaData != null) {
+        // É o admin da empresa — role = diretoria
+        _empresa = EmpresaModel.fromMap(empresaData);
+        _role = 'diretoria';
+        _status = AuthStatus.authenticated;
+        notifyListeners();
+        return;
+      }
+
+      // Não é admin — busca na tabela de usuários
+      final usuarioData = await _supabase
+          .from('usuarios')
+          .select('role, empresa_id, empresas(id, nome, cnpj, email_admin)')
+          .eq('id', userId)
+          .maybeSingle();
+
+      if (usuarioData != null) {
+        _role = usuarioData['role'];
+        _empresa = EmpresaModel.fromMap(
+          usuarioData['empresas'] as Map<String, dynamic>,
+        );
+        _status = AuthStatus.authenticated;
+      } else {
+        await _supabase.auth.signOut();
+        _status = AuthStatus.unauthenticated;
+        _erro = null;
+      }
     } catch (e) {
-      _status = AuthStatus.error;
-      _erro = 'Erro ao carregar dados da empresa.';
+      await _supabase.auth.signOut();
+      _status = AuthStatus.unauthenticated;
+      _erro = null;
     }
     notifyListeners();
   }
@@ -110,15 +139,12 @@ class AuthProvider extends ChangeNotifier {
       if (user == null) throw Exception('Falha ao criar usuário.');
 
       // Usa function security definer para bypassar RLS no insert inicial
-      await _supabase.rpc(
-        'cadastrar_empresa',
-        params: {
-          'p_id': user.id,
-          'p_nome': nome,
-          'p_cnpj': cnpj,
-          'p_email_admin': email,
-        },
-      );
+      await _supabase.rpc('cadastrar_empresa', params: {
+        'p_id': user.id,
+        'p_nome': nome,
+        'p_cnpj': cnpj,
+        'p_email_admin': email,
+      });
 
       await _supabase.auth.updateUser(
         UserAttributes(data: {'empresa_id': user.id}),
@@ -153,10 +179,8 @@ class AuthProvider extends ChangeNotifier {
   String _traduzirErro(String msg) {
     if (msg.contains('already registered')) return 'E-mail já cadastrado.';
     if (msg.contains('Invalid login')) return 'E-mail ou senha incorretos.';
-    if (msg.contains('Email not confirmed'))
-      return 'Confirme seu e-mail antes de entrar.';
-    if (msg.contains('too many requests'))
-      return 'Muitas tentativas. Aguarde alguns minutos.';
+    if (msg.contains('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
+    if (msg.contains('too many requests')) return 'Muitas tentativas. Aguarde alguns minutos.';
     return msg;
   }
 }
