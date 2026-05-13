@@ -1,23 +1,23 @@
-// lib/models/funcao_model.dart
-
 class FuncaoModel {
-  final String funcaoId;
+  final String id;
+  final String empresaId;
   final String nomeFuncao;
   final double? valorHora;
 
-  FuncaoModel({
-    required this.funcaoId,
+  const FuncaoModel({
+    required this.id,
+    required this.empresaId,
     required this.nomeFuncao,
     this.valorHora,
   });
 
-  factory FuncaoModel.fromMap(Map<String, dynamic> map) {
-    return FuncaoModel(
-      funcaoId: map['id'] as String,
-      nomeFuncao: map['nome'] as String,
-      valorHora: map['valor_hora'] != null
-          ? double.tryParse(map['valor_hora'].toString())
-          : null,
-    );
-  }
+  // Alias para compatibilidade com as views existentes
+  String get funcaoId => id;
+
+  factory FuncaoModel.fromMap(Map<String, dynamic> map) => FuncaoModel(
+    id: map['id'],
+    empresaId: map['empresa_id'],
+    nomeFuncao: map['nome_funcao'],
+    valorHora: (map['valor_hora'] as num?)?.toDouble(),
+  );
 }

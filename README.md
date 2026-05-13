@@ -1,240 +1,247 @@
-# 📋 Freelance Manager
+# Freelance Manager
 
-Sistema mobile de gestão de freelancers para alocação em pedidos de lojas, desenvolvido em Flutter com backend Laravel.
+Aplicativo Flutter para gestao de freelancers, pedidos de mao de obra, escalacao, jornada, pagamentos e relatorios por empresa.
 
----
+## Visao Geral
 
-## 🧩 Visão Geral
+O **Freelance Manager** organiza o fluxo operacional entre tres perfis principais:
 
-O **Freelance Manager** é uma plataforma que conecta três perfis de usuário — **RH**, **Gerente** e **Diretoria** — para gerenciar o ciclo completo de alocação de freelancers: desde o cadastro de colaboradores e funções, passando pela criação de pedidos de mão-de-obra, até a escalação, registro de horas e pagamento.
+| Perfil | Responsabilidades |
+|---|---|
+| **Diretoria** | Cadastrar a empresa, criar usuarios, acompanhar relatorios e indicadores |
+| **RH** | Cadastrar funcoes, cadastrar colaboradores/freelancers e escalar pessoas nos pedidos |
+| **Gerente** | Criar pedidos, acompanhar solicitacoes e controlar o ciclo da jornada |
 
----
+O backend atual do app e o **Supabase**, usando Supabase Auth, tabelas PostgreSQL, RPCs e queries diretas pelo cliente Dart.
 
-## 🏗️ Arquitetura
+## Arquitetura
 
-```
-Mobile (Flutter)
-    └── View
-        └── Provider (estado e regras de apresentação)
-            └── Service (chamadas HTTP via Dio)
-                └── API REST (Laravel + PostgreSQL)
+```text
+Flutter
+  -> Views
+  -> Providers
+  -> Services
+  -> Supabase Auth / PostgreSQL / RPC
 ```
 
 ### Stack
 
 | Camada | Tecnologia |
 |---|---|
-| Mobile | Flutter (Dart) |
-| Gerenciamento de estado | Provider |
-| Navegação | GoRouter |
-| HTTP Client | Dio |
-| Backend | Laravel 11 |
-| Banco de dados | PostgreSQL 16 |
-| Cache | Redis |
-| Infraestrutura | Docker |
+| App | Flutter / Dart |
+| Estado | Provider |
+| Navegacao | GoRouter |
+| Backend | Supabase |
+| Autenticacao | Supabase Auth |
+| Banco de dados | PostgreSQL via Supabase |
+| Variaveis de ambiente | flutter_dotenv |
+| Graficos | fl_chart |
+| Internacionalizacao de datas | intl |
 
----
+## Funcionalidades
 
-## 👥 Perfis de Usuário
+### Autenticacao e empresa
 
-| Perfil | Responsabilidades |
+- Login com e-mail e senha via Supabase Auth.
+- Cadastro inicial de empresa em `/cadastro_empresa`.
+- Identificacao de perfil por empresa administradora ou tabela `usuarios`.
+- Redirecionamento por perfil:
+  - `diretoria` -> `/direcao/home`
+  - `rh` -> `/rh/fila_pedidos`
+  - `gerente` -> `/manager/gerente`
+- Logout via Supabase Auth.
+
+### Diretoria
+
+- Tela inicial com dados da empresa.
+- Cadastro e remocao de usuarios da empresa.
+- Perfis de usuario: `diretoria`, `rh` e `gerente`.
+- Relatorios com KPIs, filtros por periodo e abas de analise.
+- Consultas por pedidos, loja, funcao, custos e evolucao mensal.
+
+### RH
+
+- Cadastro de funcoes com valor/hora.
+- Cadastro de colaboradores/freelancers com CPF, telefone, e-mail, chave Pix e funcoes.
+- Fila de pedidos pendentes.
+- Escalacao de pessoas em pedidos.
+- Finalizacao da escalacao, alterando o pedido para `escalado`.
+
+### Gerente
+
+- Listagem dos pedidos da empresa.
+- Criacao de novo pedido por loja, funcao, periodo e quantidade.
+- Visualizacao da jornada/detalhes do pedido.
+- Acoes por status:
+  - `solicitado` -> cancelar
+  - `escalado` -> aprovar ou recusar
+  - `aprovado` -> confirmar inicio
+  - `em_andamento` -> finalizar
+
+### Pagamentos e horas
+
+- Servico para registrar entrada e saida real.
+- Calculo de horas trabalhadas e valor total.
+- Upsert em `pagamentos`.
+- Marcacao de pagamentos como `fechado` ou `pago`.
+
+## Status dos modulos
+
+| Modulo | Status |
 |---|---|
-| **RH** | Cadastrar funções, cadastrar freelancers, escalar colaboradores nos pedidos |
-| **Gerente** | Criar pedidos de mão-de-obra para sua loja |
-| **Diretoria** | Visualizar relatórios consolidados de custos e alocações |
+| Autenticacao | Implementado |
+| Cadastro de empresa | Implementado |
+| Diretoria - usuarios | Implementado |
+| Diretoria - relatorios | Implementado |
+| RH - funcoes | Implementado |
+| RH - colaboradores | Implementado |
+| RH - escalacao | Implementado |
+| Gerente - pedidos | Implementado |
+| Gerente - jornada/status | Implementado |
+| Pagamentos/horas | Servico implementado; depende do fluxo de tela e schema |
 
----
+## Como Rodar
 
-## 📱 Módulos
+### Pre-requisitos
 
-### ✅ Autenticação
-- Login com e-mail e senha
-- Controle de acesso por perfil (role-based)
-- Logout com invalidação de token (Laravel Sanctum)
+- Flutter instalado.
+- Um projeto Supabase configurado.
+- Arquivo `.env` na raiz do projeto com as chaves do Supabase.
 
-### ✅ RH — Cadastros
-- Cadastro de funções com valor/hora
-- Cadastro de freelancers com CPF, telefone, e-mail e chave Pix
-- Vínculo de freelancers a múltiplas funções (N:N)
-- Soft delete de freelancers (campo `ativo`) para preservar histórico
+### Variaveis de ambiente
 
-### ✅ RH — Escalação
-- Fila de pedidos com status `solicitado`
-- Filtro automático de freelancers compatíveis com a função do pedido
-- Controle de vagas preenchidas vs. total solicitado
-- Finalização da escalação com confirmação
-- Remoção de escalados com confirmação
+Crie um arquivo `.env` na raiz:
 
-### 🔄 Gerente — Pedidos *(em desenvolvimento)*
-- Criação de pedidos por loja, função, período e quantidade
-- Visualização do histórico de pedidos
-
-### ⏳ Pagamentos / Horas *(pendente)*
-- Registro de entrada e saída real
-- Cálculo de horas trabalhadas
-- Geração de pagamentos com snapshot de valor/hora
-
-### ⏳ Diretoria — Relatórios *(pendente)*
-- Gastos por loja, função, gerente e freelancer
-- Evolução de custos por período
-
----
-
-## 🚀 Como rodar
-
-### Pré-requisitos
-- Docker e Docker Compose instalados
-
-### 1. Clone o repositório
-
-```bash
-git clone <url-do-repositorio>
-cd docker
+```env
+SUPABASE_URL=https://seu-projeto.supabase.co
+SUPABASE_ANON_KEY=sua-chave-anon
 ```
 
-### 2. Suba os containers
+O arquivo `.env` esta registrado como asset no `pubspec.yaml`.
+
+### Instalar dependencias
 
 ```bash
-docker compose up -d
-```
-
-### 3. Execute as migrations
-
-```bash
-docker exec -it freelance-app php artisan migrate
-```
-
-### 4. Crie os usuários iniciais
-
-```bash
-docker exec -it freelance-app php artisan tinker
-```
-
-```php
-$rh       = App\Models\Role::where('nome', 'rh')->first();
-$gerente  = App\Models\Role::where('nome', 'gerente')->first();
-$diretoria = App\Models\Role::where('nome', 'diretoria')->first();
-
-App\Models\User::create(['nome' => 'RH',        'email' => 'rh@admin.com',        'password' => bcrypt('password'), 'role_id' => $rh->id]);
-App\Models\User::create(['nome' => 'Gerente',   'email' => 'gerente@teste.com',   'password' => bcrypt('password'), 'role_id' => $gerente->id]);
-App\Models\User::create(['nome' => 'Diretoria', 'email' => 'diretoria@teste.com', 'password' => bcrypt('password'), 'role_id' => $diretoria->id]);
-```
-
-### 5. Rode o app Flutter
-
-```bash
-cd app-flutter
 flutter pub get
+```
+
+### Executar o app
+
+```bash
 flutter run
 ```
 
----
+### Verificar analise estatica
 
-## 🌐 Serviços
+```bash
+flutter analyze
+```
 
-| Serviço | URL |
+## Rotas Principais
+
+| Rota | Tela |
 |---|---|
-| API | http://localhost:8000 |
-| pgAdmin | http://localhost:5050 |
-| PostgreSQL | localhost:5432 |
-| Redis | localhost:6379 |
+| `/` | Splash |
+| `/login` | Login |
+| `/cadastro_empresa` | Cadastro de empresa |
+| `/direcao/home` | Home da diretoria |
+| `/direcao/relatorios` | Relatorios |
+| `/manager/gerente` | Pedidos do gerente |
+| `/manager/new_request` | Novo pedido |
+| `/manager/jornada_view/:pedidoId` | Detalhes da jornada |
+| `/rh/fila_pedidos` | Fila de pedidos do RH |
+| `/rh/escala_pedidos/:id` | Escalacao |
+| `/rh/cadastros/cadastro_funcoes` | Cadastro de funcoes |
+| `/rh/cadastros/cadastro_colaboradores` | Cadastro de colaboradores |
 
-**Credenciais pgAdmin:**
-- E-mail: `admin@admin.com`
-- Senha: `admin`
+## Estrutura do Projeto
 
----
-
-## 🗂️ Estrutura do projeto Flutter
-
-```
+```text
 lib/
-├── main.dart                  # Rotas e providers globais
-├── models/                    # Modelos de dados
-│   ├── pedido_model.dart
-│   ├── pessoa_model.dart
-│   ├── funcao_model.dart
-│   ├── pessoa_no_pedido.dart
-│   └── colaborador_funcao_model.dart
-├── providers/                 # Gerenciamento de estado
-│   ├── auth_provider.dart
-│   ├── pedido_provider.dart
-│   ├── pessoa_provider.dart
-│   ├── funcao_provider.dart
-│   └── escalacao_provider.dart
-├── services/                  # Comunicação com a API
-│   ├── api_services.dart
-│   └── escalacao_service.dart
-└── views/                     # Telas
-    ├── home_view.dart
-    ├── rh/
-    │   ├── fila_pedidos_view.dart
-    │   ├── escalacao_view.dart
-    │   └── cadastros/
-    │       ├── funcoes_view.dart
-    │       └── colaboradores_view.dart
-    ├── manager/
-    │   ├── requests_view.dart
-    │   ├── new_request_view.dart
-    │   └── jornada_view.dart
-    └── direcao/
-        └── relatorios_consolidados_view.dart
+  main.dart
+  helpers/
+    datetime_helper.dart
+  models/
+    empresa_model.dart
+    freelancer_escalado_model.dart
+    funcao_model.dart
+    pagamento_model.dart
+    pedido_model.dart
+    pessoa_model.dart
+    pessoa_no_pedido.dart
+    unitystore.dart
+    usuario_model.dart
+  providers/
+    auth_provider.dart
+    escalacao_provider.dart
+    funcao_provider.dart
+    loja_provider.dart
+    pedido_provider.dart
+    pessoa_funcao_provider.dart
+    pessoa_provider.dart
+    usuario_provider.dart
+  services/
+    escalacao_service.dart
+    pagamento_service.dart
+    relatorio_service.dart
+    status_service.dart
+    supabase_client.dart
+    supabase_service.dart
+  theme/
+    app_theme.dart
+  views/
+    cadastro_empresa_view.dart
+    login_view.dart
+    relatorios_view.dart
+    splash_view.dart
+    direcao/
+      diretoria_home_view.dart
+    manager/
+      jornada_view.dart
+      new_request_view.dart
+      requests_view.dart
+    rh/
+      escalacao_view.dart
+      fila_pedidos_view.dart
+      cadastros/
+        colaboradores_view.dart
+        funcoes_view.dart
 ```
 
----
+## Entidades e Tabelas Esperadas
 
-## 🔌 Endpoints principais da API
+O app consulta ou atualiza as seguintes tabelas/relacionamentos no Supabase:
 
-| Método | Rota | Descrição |
-|---|---|---|
-| POST | `/api/auth/login` | Login |
-| POST | `/api/auth/logout` | Logout |
-| GET | `/api/freelancers` | Listar freelancers |
-| POST | `/api/freelancers` | Cadastrar freelancer |
-| PATCH | `/api/freelancers/{id}` | Atualizar (soft delete via `ativo: false`) |
-| GET | `/api/funcoes` | Listar funções |
-| POST | `/api/funcoes` | Cadastrar função |
-| GET | `/api/pedidos` | Listar pedidos |
-| POST | `/api/pedidos` | Criar pedido |
-| GET | `/api/pedidos/{id}/escalacao` | Buscar escalados de um pedido |
-| POST | `/api/pedidos/{id}/escalacao` | Escalar freelancer |
-| DELETE | `/api/pedidos/{id}/escalacao/{freelancer}` | Remover escalado |
-| POST | `/api/pedidos/{id}/escalacao/finalizar` | Finalizar escalação |
-| POST | `/api/pedidos/{id}/horas` | Registrar horas |
-| GET | `/api/relatorios/gastos-por-loja` | Relatório por loja |
+| Tabela/RPC | Uso |
+|---|---|
+| `empresas` | Dados da empresa administradora |
+| `usuarios` | Usuarios vinculados a empresa e seus perfis |
+| `lojas` | Lojas disponiveis para pedidos |
+| `funcoes` | Funcoes e valores por hora |
+| `pessoas` | Colaboradores/freelancers |
+| `pessoa_funcao` | Relacao entre pessoas e funcoes |
+| `pedidos` | Solicitacoes de mao de obra |
+| `pedido_escalacao` | Pessoas escaladas e jornada real |
+| `pagamentos` | Horas, valores e status de pagamento |
+| `cadastrar_empresa` | RPC usada no cadastro inicial da empresa |
+| `criar_usuario` | RPC usada para criar usuario da empresa |
 
----
+## Status de Pedido
 
-## 🎨 Design System
+```text
+solicitado
+escalado
+aprovado
+recusado
+em_andamento
+finalizado
+cancelado
+```
 
-Todas as telas seguem um tema escuro unificado:
+## Tema
 
-| Token | Valor | Uso |
-|---|---|---|
-| `_dark` | `#0F1117` | Background principal |
-| `_card` | `#1A1D27` | Cards e superfícies |
-| `_accent` | `#00E5A0` | Ações, badges, progresso |
-| `_danger` | `#FF4D6A` | Erros, remoção |
-| `_textPrimary` | `#EEEEF5` | Texto principal |
-| `_textMuted` | `#6B7280` | Texto secundário, labels |
+O app usa um tema escuro centralizado em `lib/theme/app_theme.dart`, com cores em `AppColors` para background, cards, acentos, texto, bordas, sucesso e perigo.
 
----
+## Autor
 
-## 📊 Status do projeto
-
-| Módulo | Status | Progresso |
-|---|---|---|
-| Autenticação | ✅ Concluído | 100% |
-| RH — Cadastros | ✅ Concluído | 90% |
-| RH — Escalação | ✅ Concluído | 85% |
-| Gerente — Pedidos | 🔄 Em desenvolvimento | 20% |
-| Pagamentos / Horas | ⏳ Pendente | 5% |
-| Diretoria — Relatórios | ⏳ Pendente | 10% |
-
-**Progresso geral: ~45%**
-
----
-
-## 👨‍💻 Autor
-
-Desenvolvido por **Juliano** — 2026
+Desenvolvido por **Juliano** - 2026

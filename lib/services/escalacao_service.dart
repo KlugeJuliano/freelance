@@ -1,10 +1,11 @@
-// lib/services/escalacao_service.dart
-
 import 'package:freelance/models/freelancer_escalado_model.dart';
 import 'package:freelance/services/supabase_client.dart';
 
 class EscalacaoService {
   static const _tabela = 'pedido_escalacao';
+
+  // Definido pelo EscalacaoProvider.inicializar() após o login
+  static String? empresaId;
 
   static Future<List<FreelancerEscaladoModel>> buscarEscalados(
     String pedidoId,
@@ -26,6 +27,7 @@ class EscalacaoService {
     await supabase.from(_tabela).upsert({
       'pedido_id': pedidoId,
       'pessoa_id': pessoaId,
+      'empresa_id': empresaId,
       'status': 'escalado',
     });
   }
@@ -38,8 +40,6 @@ class EscalacaoService {
         .eq('pessoa_id', pessoaId);
   }
 
-  /// Finaliza a escalação — muda o pedido para 'escalado'
-  /// para que o gerente possa aprovar ou recusar.
   static Future<void> finalizar(String pedidoId) async {
     await supabase
         .from('pedidos')

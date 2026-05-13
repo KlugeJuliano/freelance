@@ -38,7 +38,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
 
     // IDs já escalados para evitar duplicatas
     final escaladosIds = escalacaoProvider.escalados
-        .map((e) => e.freelancerId)
+        .map((e) => e.pessoaId)
         .toSet();
 
     final compativeis = pessoaProvider.pessoas
@@ -466,7 +466,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
                             ),
                             onPressed: () => escalacaoProvider.removerEscalado(
                               widget.pedido.id,
-                              escalado.freelancerId, // corrigido
+                              escalado.pessoaId,
                             ),
                           ),
                         ),

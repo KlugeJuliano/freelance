@@ -45,7 +45,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
     super.dispose();
   }
 
-  void _submeter() {
+  Future<void> _submeter() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (dataInicio == null || dataFim == null) {
@@ -70,6 +70,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
     }
 
     final auth = context.read<AuthProvider>();
+    final pedidoProvider = context.read<PedidoProvider>();
 
     if (auth.user == null) {
       ScaffoldMessenger.of(
@@ -91,19 +92,33 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
       dataCriacao: DateTime.now(),
     );
 
-    context.read<PedidoProvider>().adicionarPedido(novoPedido);
+    final sucesso = await pedidoProvider.adicionarPedido(novoPedido);
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Solicitação enviada ao RH')));
+    if (!mounted) return;
 
-    context.pop();
+    if (sucesso) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Solicitação enviada ao RH com sucesso!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      context.pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(pedidoProvider.erro ?? 'Erro ao enviar solicitação'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final funcoes = context.watch<FuncaoProvider>().funcoes;
     final lojas = context.watch<LojaProvider>().lojas;
+    final pedidoLoading = context.watch<PedidoProvider>().loading;
 
     return Scaffold(
       appBar: AppBar(
@@ -141,7 +156,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                             labelText: 'Loja',
                             border: OutlineInputBorder(),
                           ),
-                          value: _lojaSelecionada,
+                          initialValue: _lojaSelecionada,
                           hint: Text(
                             lojas.isEmpty
                                 ? 'Carregando lojas...'
@@ -153,7 +168,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                               child: Text(loja.nomeLoja),
                             );
                           }).toList(),
-                          onChanged: lojas.isEmpty
+                          onChanged: (lojas.isEmpty || pedidoLoading)
                               ? null
                               : (value) {
                                   setState(() => _lojaSelecionada = value);
@@ -169,7 +184,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                             labelText: 'Função',
                             border: OutlineInputBorder(),
                           ),
-                          value: _funcaoSelecionada,
+                          initialValue: _funcaoSelecionada,
                           hint: Text(
                             funcoes.isEmpty
                                 ? 'Nenhuma função cadastrada'
@@ -181,7 +196,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                               child: Text(funcao.nomeFuncao),
                             );
                           }).toList(),
-                          onChanged: funcoes.isEmpty
+                          onChanged: (funcoes.isEmpty || pedidoLoading)
                               ? null
                               : (value) {
                                   setState(() => _funcaoSelecionada = value);
@@ -194,6 +209,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                         // Quantidade
                         TextFormField(
                           controller: quantidadeController,
+                          enabled: !pedidoLoading,
                           validator: (value) => (value == null || value.isEmpty)
                               ? 'Campo obrigatório'
                               : null,
@@ -208,6 +224,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                         // Data início
                         TextFormField(
                           readOnly: true,
+                          enabled: !pedidoLoading,
                           decoration: const InputDecoration(
                             labelText: 'Data/Horário de Início',
                             border: OutlineInputBorder(),
@@ -236,6 +253,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                         // Data fim
                         TextFormField(
                           readOnly: true,
+                          enabled: !pedidoLoading,
                           decoration: const InputDecoration(
                             labelText: 'Data/Hora Fim',
                             border: OutlineInputBorder(),
@@ -264,6 +282,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                         // Observações
                         TextFormField(
                           controller: observacaoController,
+                          enabled: !pedidoLoading,
                           validator: (value) => (value == null || value.isEmpty)
                               ? 'Campo obrigatório'
                               : null,
@@ -282,10 +301,19 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.send),
-                  label: const Text(
-                    'Enviar para RH',
-                    style: TextStyle(fontSize: 16),
+                  icon: pedidoLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.send),
+                  label: Text(
+                    pedidoLoading ? 'Enviando...' : 'Enviar para RH',
+                    style: const TextStyle(fontSize: 16),
                   ),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -293,7 +321,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: _submeter,
+                  onPressed: pedidoLoading ? null : _submeter,
                 ),
               ),
             ],

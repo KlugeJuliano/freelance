@@ -34,7 +34,15 @@ class _SplashViewState extends State<SplashView>
 
     _controller.forward();
 
-    Future.delayed(const Duration(milliseconds: 1800), _verificar);
+    _start(); // 👈 usa função async
+  }
+
+  Future<void> _start() async {
+    await Future.delayed(const Duration(milliseconds: 1800));
+
+    if (!mounted) return; // 🔥 AQUI resolve o bug
+
+    await _verificar();
   }
 
   @override
@@ -45,9 +53,14 @@ class _SplashViewState extends State<SplashView>
 
   Future<void> _verificar() async {
     final auth = context.read<AuthProvider>();
+
     await auth.verificarLogin();
 
     if (!mounted) return;
+
+    print('STATUS: ${auth.status}');
+    print('LOGADO: ${auth.isLogado}');
+    print('ROLE: ${auth.role}');
 
     if (auth.isLogado) {
       switch (auth.role) {
@@ -61,10 +74,10 @@ class _SplashViewState extends State<SplashView>
           context.go('/direcao/relatorios');
           break;
         default:
-          context.go('/login');
+          context.go('/cadastro_empresa');
       }
     } else {
-      context.go('/login');
+      context.go('/cadastro_empresa');
     }
   }
 
