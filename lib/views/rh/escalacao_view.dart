@@ -3,28 +3,57 @@ import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/providers/auth_provider.dart';
 import 'package:freelance/providers/escalacao_provider.dart';
 import 'package:freelance/providers/funcao_provider.dart';
+import 'package:freelance/providers/pedido_provider.dart';
 import 'package:freelance/providers/pessoa_provider.dart';
 import 'package:freelance/theme/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 class EscalacaoView extends StatefulWidget {
-  final PedidoModel pedido;
-  const EscalacaoView({super.key, required this.pedido});
+  final String pedidoId;
+  final Object? pedido;
+  const EscalacaoView({super.key, required this.pedidoId, this.pedido});
 
   @override
   State<EscalacaoView> createState() => _EscalacaoViewState();
 }
 
 class _EscalacaoViewState extends State<EscalacaoView> {
+  PedidoModel? _pedido;
+  bool _carregandoPedido = true;
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      context.read<EscalacaoProvider>().carregarEscalados(widget.pedido.id);
-      context.read<PessoaProvider>().fetchPessoas();
-      context.read<FuncaoProvider>().fetchFuncoes();
-    });
+    _pedido = widget.pedido is PedidoModel
+        ? widget.pedido as PedidoModel
+        : null;
+    Future.microtask(_carregar);
+  }
+
+  Future<void> _carregar() async {
+    final pedidoProvider = context.read<PedidoProvider>();
+
+    if (_pedido == null) {
+      await pedidoProvider.fetchPedidos();
+      if (!mounted) return;
+      _pedido = pedidoProvider.pedidos
+          .where((pedido) => pedido.id == widget.pedidoId)
+          .firstOrNull;
+    }
+
+    if (_pedido == null) {
+      if (mounted) setState(() => _carregandoPedido = false);
+      return;
+    }
+
+    if (!mounted) return;
+    await Future.wait([
+      context.read<EscalacaoProvider>().carregarEscalados(_pedido!.id),
+      context.read<PessoaProvider>().fetchPessoas(),
+      context.read<FuncaoProvider>().fetchFuncoes(),
+    ]);
+    if (mounted) setState(() => _carregandoPedido = false);
   }
 
   void _abrirDialogEscalar(BuildContext context) {
@@ -33,8 +62,8 @@ class _EscalacaoViewState extends State<EscalacaoView> {
     final funcaoProvider = context.read<FuncaoProvider>();
 
     final nomeFuncao =
-        funcaoProvider.buscarPorId(widget.pedido.funcaoId)?.nomeFuncao ??
-        widget.pedido.funcaoId;
+        funcaoProvider.buscarPorId(_pedido!.funcaoId)?.nomeFuncao ??
+        _pedido!.funcaoId;
 
     // IDs já escalados para evitar duplicatas
     final escaladosIds = escalacaoProvider.escalados
@@ -44,7 +73,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
     final compativeis = pessoaProvider.pessoas
         .where(
           (p) =>
-              p.funcaoIds.contains(widget.pedido.funcaoId) &&
+              p.funcaoIds.contains(_pedido!.funcaoId) &&
               !escaladosIds.contains(p.pessoaId),
         )
         .toList();
@@ -163,7 +192,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
                       onTap: () {
                         Navigator.pop(context);
                         escalacaoProvider.escalarFreelancer(
-                          widget.pedido.id,
+                          _pedido!.id,
                           p.pessoaId,
                         );
                       },
@@ -194,7 +223,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
           ),
         ),
         content: Text(
-          'Escalados: ${escalacaoProvider.escalados.length}/${widget.pedido.quantidade}\nDeseja confirmar?',
+          'Escalados: ${escalacaoProvider.escalados.length}/${_pedido!.quantidade}\nDeseja confirmar?',
           style: const TextStyle(color: AppColors.textMuted),
         ),
         actions: [
@@ -214,7 +243,18 @@ class _EscalacaoViewState extends State<EscalacaoView> {
     );
 
     if (confirmar != true) return;
-    final sucesso = await escalacaoProvider.finalizar(widget.pedido.id);
+    if (escalacaoProvider.escalados.length < _pedido!.quantidade) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Preencha todas as vagas antes de finalizar.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
+    final sucesso = await escalacaoProvider.finalizar(_pedido!.id);
     if (sucesso && mounted) context.pop();
   }
 
@@ -229,11 +269,24 @@ class _EscalacaoViewState extends State<EscalacaoView> {
     final escalacaoProvider = context.watch<EscalacaoProvider>();
     final funcaoProvider = context.watch<FuncaoProvider>();
 
-    final nomeFuncao =
-        funcaoProvider.buscarPorId(widget.pedido.funcaoId)?.nomeFuncao ??
-        widget.pedido.funcaoId;
+    if (_pedido == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Escalação')),
+        body: Center(
+          child: _carregandoPedido
+              ? const CircularProgressIndicator()
+              : const Text('Pedido não encontrado'),
+        ),
+      );
+    }
 
-    final vagas = widget.pedido.quantidade;
+    final pedido = _pedido!;
+
+    final nomeFuncao =
+        funcaoProvider.buscarPorId(pedido.funcaoId)?.nomeFuncao ??
+        pedido.funcaoId;
+
+    final vagas = pedido.quantidade;
     final escalados = escalacaoProvider.escalados.length;
     final progresso = vagas > 0 ? escalados / vagas : 0.0;
 
@@ -243,8 +296,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            onPressed: () =>
-                escalacaoProvider.carregarEscalados(widget.pedido.id),
+            onPressed: () => escalacaoProvider.carregarEscalados(pedido.id),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -275,7 +327,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
                   children: [
                     AccentBadge(nomeFuncao),
                     const Spacer(),
-                    StatusBadge(widget.pedido.status),
+                    StatusBadge(pedido.status),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -288,7 +340,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '${_formatarData(widget.pedido.dataInicio)}  →  ${_formatarData(widget.pedido.dataFim)}',
+                      '${_formatarData(pedido.dataInicio)}  →  ${_formatarData(pedido.dataFim)}',
                       style: const TextStyle(
                         color: AppColors.textMuted,
                         fontSize: 13,
@@ -465,7 +517,7 @@ class _EscalacaoViewState extends State<EscalacaoView> {
                               ),
                             ),
                             onPressed: () => escalacaoProvider.removerEscalado(
-                              widget.pedido.id,
+                              pedido.id,
                               escalado.pessoaId,
                             ),
                           ),
