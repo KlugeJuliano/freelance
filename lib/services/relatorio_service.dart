@@ -5,8 +5,13 @@ import 'package:freelance/services/supabase_client.dart';
 class RelatorioService {
   /// Pedidos agrupados por status, com contagem.
   /// Retorna: [{ status, total }]
-  static Future<List<Map<String, dynamic>>> pedidosPorStatus() async {
-    final raw = await supabase.from('pedidos').select('status');
+  static Future<List<Map<String, dynamic>>> pedidosPorStatus({
+    required String empresaId,
+  }) async {
+    final raw = await supabase
+        .from('pedidos')
+        .select('status')
+        .eq('empresa_id', empresaId);
 
     final Map<String, int> agrupado = {};
     for (final row in raw as List) {
@@ -23,10 +28,14 @@ class RelatorioService {
   /// Pedidos agrupados por loja.
   /// Retorna: [{ nome, total_pedidos }]
   static Future<List<Map<String, dynamic>>> pedidosPorLoja({
+    required String empresaId,
     String? dataInicio,
     String? dataFim,
   }) async {
-    var query = supabase.from('pedidos').select('lojas(nome), data_inicio');
+    var query = supabase
+        .from('pedidos')
+        .select('loja, data_inicio') // 'loja' é texto solto, não há tabela 'lojas'
+        .eq('empresa_id', empresaId);
 
     if (dataInicio != null) query = query.gte('data_inicio', dataInicio);
     if (dataFim != null) query = query.lte('data_inicio', dataFim);
@@ -35,7 +44,7 @@ class RelatorioService {
 
     final Map<String, int> agrupado = {};
     for (final row in raw as List) {
-      final nome = row['lojas']?['nome'] as String? ?? 'Sem loja';
+      final nome = row['loja'] as String? ?? 'Sem loja';
       agrupado[nome] = (agrupado[nome] ?? 0) + 1;
     }
 
@@ -51,10 +60,14 @@ class RelatorioService {
   /// Pedidos agrupados por função.
   /// Retorna: [{ nome, total_pedidos }]
   static Future<List<Map<String, dynamic>>> pedidosPorFuncao({
+    required String empresaId,
     String? dataInicio,
     String? dataFim,
   }) async {
-    var query = supabase.from('pedidos').select('funcoes(nome), data_inicio');
+    var query = supabase
+        .from('pedidos')
+        .select('setor, data_inicio') // 'setor' é a função do pedido, texto solto
+        .eq('empresa_id', empresaId);
 
     if (dataInicio != null) query = query.gte('data_inicio', dataInicio);
     if (dataFim != null) query = query.lte('data_inicio', dataFim);
@@ -63,7 +76,7 @@ class RelatorioService {
 
     final Map<String, int> agrupado = {};
     for (final row in raw as List) {
-      final nome = row['funcoes']?['nome'] as String? ?? 'Sem função';
+      final nome = row['setor'] as String? ?? 'Sem função';
       agrupado[nome] = (agrupado[nome] ?? 0) + 1;
     }
 
@@ -79,12 +92,16 @@ class RelatorioService {
   /// Custos agrupados por loja (via pagamentos).
   /// Retorna: [{ nome, total_horas, total_valor }]
   static Future<List<Map<String, dynamic>>> custosPorLoja({
+    required String empresaId,
     String? dataInicio,
     String? dataFim,
   }) async {
     final raw = await supabase
         .from('pagamentos')
-        .select('total_horas, valor_total, pedidos(data_inicio, lojas(nome))');
+        .select(
+          'total_horas, valor_total, pedidos!inner(data_inicio, loja, empresa_id)',
+        )
+        .eq('pedidos.empresa_id', empresaId);
 
     final Map<String, Map<String, dynamic>> agrupado = {};
     for (final row in raw as List) {
@@ -100,7 +117,7 @@ class RelatorioService {
         continue;
       }
 
-      final nome = row['pedidos']?['lojas']?['nome'] as String? ?? 'Sem loja';
+      final nome = row['pedidos']?['loja'] as String? ?? 'Sem loja';
       agrupado.putIfAbsent(
         nome,
         () => {'nome': nome, 'total_horas': 0.0, 'total_valor': 0.0},
@@ -118,14 +135,16 @@ class RelatorioService {
   /// Custos agrupados por função (via pagamentos + pedido).
   /// Retorna: [{ nome, total_horas, total_valor }]
   static Future<List<Map<String, dynamic>>> custosPorFuncao({
+    required String empresaId,
     String? dataInicio,
     String? dataFim,
   }) async {
     final raw = await supabase
         .from('pagamentos')
         .select(
-          'total_horas, valor_total, pedidos(data_inicio, funcoes(nome))',
-        );
+          'total_horas, valor_total, pedidos!inner(data_inicio, setor, empresa_id)',
+        )
+        .eq('pedidos.empresa_id', empresaId);
 
     final Map<String, Map<String, dynamic>> agrupado = {};
     for (final row in raw as List) {
@@ -141,8 +160,7 @@ class RelatorioService {
         continue;
       }
 
-      final nome =
-          row['pedidos']?['funcoes']?['nome'] as String? ?? 'Sem função';
+      final nome = row['pedidos']?['setor'] as String? ?? 'Sem função';
       agrupado.putIfAbsent(
         nome,
         () => {'nome': nome, 'total_horas': 0.0, 'total_valor': 0.0},
@@ -160,12 +178,14 @@ class RelatorioService {
   /// Evolução mensal de custos totais.
   /// Retorna: [{ mes, total_valor }] ordenado cronologicamente.
   static Future<List<Map<String, dynamic>>> evolucaoMensal({
+    required String empresaId,
     String? dataInicio,
     String? dataFim,
   }) async {
     final raw = await supabase
         .from('pagamentos')
-        .select('valor_total, created_at');
+        .select('valor_total, created_at, pedidos!inner(empresa_id)')
+        .eq('pedidos.empresa_id', empresaId);
 
     final Map<String, double> agrupado = {};
     for (final row in raw as List) {
