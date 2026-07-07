@@ -1,5 +1,3 @@
-// ignore_for_file: unused_import, unnecessary_null_comparison, dead_code, use_build_context_synchronously, deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/providers/escalacao_provider.dart';
@@ -8,7 +6,6 @@ import 'package:freelance/providers/loja_provider.dart';
 import 'package:freelance/providers/pedido_provider.dart';
 import 'package:freelance/services/status_service.dart';
 import 'package:freelance/theme/app_theme.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -311,7 +308,7 @@ class _JornadaViewState extends State<JornadaView> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    subtitle: escalado.status != null
+                    subtitle: escalado.status != "pendente"
                         ? StatusBadge(escalado.status)
                         : null,
                   ),

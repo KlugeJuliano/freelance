@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:freelance/models/usuario_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,6 +11,7 @@ class UsuarioProvider extends ChangeNotifier {
   bool _loading = false;
   String? _erro;
   String? _empresaId;
+  StreamSubscription<List<Map<String, dynamic>>>? _subscription;
 
   List<UsuarioModel> get usuarios => _usuarios;
   bool get loading => _loading;
@@ -25,15 +28,16 @@ class UsuarioProvider extends ChangeNotifier {
     _loading = true;
     notifyListeners();
 
-    _supabase
+    _subscription?.cancel();
+    _subscription = _supabase
         .from('usuarios')
         .stream(primaryKey: ['id'])
         .eq('empresa_id', _empresaId!)
         .listen((rows) {
-      _usuarios = rows.map(UsuarioModel.fromMap).toList();
-      _loading = false;
-      notifyListeners();
-    });
+          _usuarios = rows.map(UsuarioModel.fromMap).toList();
+          _loading = false;
+          notifyListeners();
+        });
   }
 
   Future<void> criarUsuario({
@@ -48,13 +52,16 @@ class UsuarioProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _supabase.rpc('criar_usuario', params: {
-        'p_nome': nome,
-        'p_email': email,
-        'p_senha': senha,
-        'p_role': role,
-        'p_empresa_id': _empresaId,
-      });
+      await _supabase.rpc(
+        'criar_usuario',
+        params: {
+          'p_nome': nome,
+          'p_email': email,
+          'p_senha': senha,
+          'p_role': role,
+          'p_empresa_id': _empresaId,
+        },
+      );
     } on PostgrestException catch (e) {
       _erro = e.message.contains('E-mail já cadastrado')
           ? 'E-mail já cadastrado.'
@@ -78,8 +85,16 @@ class UsuarioProvider extends ChangeNotifier {
   }
 
   void limpar() {
+    _subscription?.cancel();
+    _subscription = null;
     _usuarios = [];
     _empresaId = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 }

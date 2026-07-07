@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:freelance/models/pessoa_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,6 +11,7 @@ class PessoaProvider extends ChangeNotifier {
   bool _loading = false;
   String? _erro;
   String? _empresaId;
+  StreamSubscription<List<Map<String, dynamic>>>? _subscription;
 
   List<PessoaModel> get pessoas => _pessoas;
   bool get loading => _loading;
@@ -25,7 +28,8 @@ class PessoaProvider extends ChangeNotifier {
     _loading = true;
     notifyListeners();
 
-    _supabase
+    _subscription?.cancel();
+    _subscription = _supabase
         .from('pessoas')
         .stream(primaryKey: ['id'])
         .eq('empresa_id', _empresaId!)
@@ -87,8 +91,16 @@ class PessoaProvider extends ChangeNotifier {
   }
 
   void limpar() {
+    _subscription?.cancel();
+    _subscription = null;
     _pessoas = [];
     _empresaId = null;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _subscription?.cancel();
+    super.dispose();
   }
 }

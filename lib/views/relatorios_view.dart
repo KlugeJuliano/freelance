@@ -58,6 +58,15 @@ class _RelatoriosViewState extends State<RelatoriosView>
   String? get _fimStr => _dataFim?.toIso8601String();
 
   Future<void> _carregar() async {
+    final empresaId = context.read<AuthProvider>().empresaId;
+    if (empresaId == null) {
+      setState(() {
+        _loading = false;
+        _erro = 'Empresa não identificada.';
+      });
+      return;
+    }
+
     setState(() {
       _loading = true;
       _erro = null;
@@ -65,22 +74,27 @@ class _RelatoriosViewState extends State<RelatoriosView>
     try {
       final results = await Future.wait([
         RelatorioService.pedidosPorLoja(
+          empresaId: empresaId,
           dataInicio: _inicioStr,
           dataFim: _fimStr,
         ),
         RelatorioService.pedidosPorFuncao(
+          empresaId: empresaId,
           dataInicio: _inicioStr,
           dataFim: _fimStr,
         ),
         RelatorioService.custosPorLoja(
+          empresaId: empresaId,
           dataInicio: _inicioStr,
           dataFim: _fimStr,
         ),
         RelatorioService.custosPorFuncao(
+          empresaId: empresaId,
           dataInicio: _inicioStr,
           dataFim: _fimStr,
         ),
         RelatorioService.evolucaoMensal(
+          empresaId: empresaId,
           dataInicio: _inicioStr,
           dataFim: _fimStr,
         ),

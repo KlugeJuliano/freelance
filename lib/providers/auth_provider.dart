@@ -2,7 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:freelance/models/empresa_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-enum AuthStatus { idle, loading, authenticated, unauthenticated, error }
+
+enum AuthStatus {
+  idle,
+  loading,
+  authenticated,
+  unauthenticated,
+  error,
+  passwordRecovery, // novo: usuário clicou no link de recuperação
+}
 
 class AuthProvider extends ChangeNotifier {
   final _supabase = Supabase.instance.client;
@@ -26,9 +34,21 @@ class AuthProvider extends ChangeNotifier {
 
   AuthProvider() {
     _supabase.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
       final session = data.session;
+
+      // Evento especial: usuário clicou no link de recuperação de senha.
+      // Aqui NÃO carregamos empresa nem autenticamos de fato — só sinalizamos
+      // pra UI mostrar a tela de "criar nova senha".
+      if (event == AuthChangeEvent.passwordRecovery) {
+        _status = AuthStatus.passwordRecovery;
+        notifyListeners();
+        return;
+      }
+
       if (session == null) {
         _empresa = null;
+        _role = null;
         _status = AuthStatus.unauthenticated;
         notifyListeners();
       } else {
@@ -59,7 +79,6 @@ class AuthProvider extends ChangeNotifier {
         _empresa = EmpresaModel.fromMap(empresaData);
         _role = 'diretoria';
         _status = AuthStatus.authenticated;
-        notifyListeners();
         return;
       }
 
@@ -77,23 +96,40 @@ class AuthProvider extends ChangeNotifier {
         );
         _status = AuthStatus.authenticated;
       } else {
-        await _supabase.auth.signOut();
         _status = AuthStatus.unauthenticated;
-        _erro = null;
       }
     } catch (e) {
-      await _supabase.auth.signOut();
+      debugPrint('Erro ao carregar empresa: $e');
       _status = AuthStatus.unauthenticated;
       _erro = null;
+    } finally {
+      // Se ficamos não-autenticados, tentamos deslogar — mas isso nunca
+      // pode impedir o notifyListeners() de rodar (esse era o bug do loading
+      // travado: signOut() lançava exceção com refresh token inválido e
+      // o notifyListeners() de sucesso nunca era alcançado).
+      if (_status == AuthStatus.unauthenticated) {
+        try {
+          await _supabase.auth.signOut();
+        } catch (_) {
+          // ignora — já estamos deslogando de qualquer forma
+        }
+      }
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   // Usado pela SplashView
   Future<void> verificarLogin() async {
     final session = _supabase.auth.currentSession;
     if (session != null) {
-      await _carregarEmpresa(session.user.id);
+      // timeout de segurança: nunca deixa a Splash travada indefinidamente
+      await _carregarEmpresa(session.user.id).timeout(
+        const Duration(seconds: 8),
+        onTimeout: () {
+          _status = AuthStatus.unauthenticated;
+          notifyListeners();
+        },
+      );
     } else {
       _status = AuthStatus.unauthenticated;
       notifyListeners();
@@ -107,8 +143,13 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _supabase.auth.signInWithPassword(email: email, password: senha);
-      // onAuthStateChange cuida do _carregarEmpresa
+      final response = await _supabase.auth.signInWithPassword(
+        email: email,
+        password: senha,
+      );
+      final user = response.user;
+      if (user == null) throw const AuthException('Falha ao autenticar.');
+      await _carregarEmpresa(user.id);
       return true;
     } on AuthException catch (e) {
       _status = AuthStatus.error;
@@ -139,12 +180,15 @@ class AuthProvider extends ChangeNotifier {
       if (user == null) throw Exception('Falha ao criar usuário.');
 
       // Usa function security definer para bypassar RLS no insert inicial
-      await _supabase.rpc('cadastrar_empresa', params: {
-        'p_id': user.id,
-        'p_nome': nome,
-        'p_cnpj': cnpj,
-        'p_email_admin': email,
-      });
+      await _supabase.rpc(
+        'cadastrar_empresa',
+        params: {
+          'p_id': user.id,
+          'p_nome': nome,
+          'p_cnpj': cnpj,
+          'p_email_admin': email,
+        },
+      );
 
       await _supabase.auth.updateUser(
         UserAttributes(data: {'empresa_id': user.id}),
@@ -172,6 +216,61 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Envia e-mail com o link de recuperação de senha.
+  /// [redirectTo] deve ser o deep link configurado no seu app
+  /// (ex: 'io.supabase.freelance://reset-callback/') e também
+  /// cadastrado em Authentication > URL Configuration no painel Supabase.
+  Future<bool> recuperarSenha(String email, {required String redirectTo}) async {
+    _status = AuthStatus.loading;
+    _erro = null;
+    notifyListeners();
+
+    try {
+      await _supabase.auth.resetPasswordForEmail(
+        email,
+        redirectTo: redirectTo,
+      );
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return true;
+    } on AuthException catch (e) {
+      _status = AuthStatus.error;
+      _erro = _traduzirErro(e.message);
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _status = AuthStatus.error;
+      _erro = 'Erro ao enviar e-mail de recuperação.';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Chamado na tela de "nova senha", depois que o usuário chegou lá
+  /// através do link de recuperação (status == AuthStatus.passwordRecovery).
+  Future<bool> definirNovaSenha(String novaSenha) async {
+    _status = AuthStatus.loading;
+    _erro = null;
+    notifyListeners();
+
+    try {
+      final response = await _supabase.auth.updateUser(
+        UserAttributes(password: novaSenha),
+      );
+      final user = response.user;
+      if (user == null) throw const AuthException('Falha ao atualizar senha.');
+
+      // Depois de trocar a senha, carrega os dados normalmente
+      await _carregarEmpresa(user.id);
+      return true;
+    } on AuthException catch (e) {
+      _status = AuthStatus.error;
+      _erro = _traduzirErro(e.message);
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> signOut() async {
     await _supabase.auth.signOut();
   }
@@ -179,8 +278,18 @@ class AuthProvider extends ChangeNotifier {
   String _traduzirErro(String msg) {
     if (msg.contains('already registered')) return 'E-mail já cadastrado.';
     if (msg.contains('Invalid login')) return 'E-mail ou senha incorretos.';
-    if (msg.contains('Email not confirmed')) return 'Confirme seu e-mail antes de entrar.';
-    if (msg.contains('too many requests')) return 'Muitas tentativas. Aguarde alguns minutos.';
+    if (msg.contains('Email not confirmed')) {
+      return 'Confirme seu e-mail antes de entrar.';
+    }
+    if (msg.contains('too many requests')) {
+      return 'Muitas tentativas. Aguarde alguns minutos.';
+    }
+    if (msg.contains('New password should be different')) {
+      return 'A nova senha deve ser diferente da atual.';
+    }
+    if (msg.contains('session') || msg.contains('expired')) {
+      return 'Link expirado. Solicite a recuperação de senha novamente.';
+    }
     return msg;
   }
 }

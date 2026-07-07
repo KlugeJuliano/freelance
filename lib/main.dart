@@ -1,5 +1,6 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import 'package:freelance/models/pedido_model.dart';
 import 'package:freelance/providers/auth_provider.dart';
 import 'package:freelance/providers/escalacao_provider.dart';
 import 'package:freelance/providers/funcao_provider.dart';
@@ -25,6 +26,8 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:app_links/app_links.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -64,13 +67,19 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   late final AuthProvider _auth;
   late final GoRouter _router;
+  String? _initializedEmpresaId;
+
+   final _appLinks = AppLinks();
+  StreamSubscription<Uri>? _linkSubscription;
 
   @override
   void initState() {
     super.initState();
     _auth = context.read<AuthProvider>();
+    _auth.addListener(_syncProviders);
+    _iniciarDeepLinks();
     _router = GoRouter(
-      refreshListenable: _auth,
+      refreshListenable: _AuthRouterRefresh(_auth),
       redirect: (context, state) {
         final status = _auth.status;
 
@@ -85,62 +94,162 @@ class _MyAppState extends State<MyApp> {
 
         if (!logado && !naRotaPublica) return '/login';
 
-        if (logado && naRotaPublica) {
-          switch (_auth.role) {
-            case 'gerente':
-              return '/manager/gerente';
-            case 'rh':
-              return '/rh/fila_pedidos';
-            case 'diretoria':
-            default:
-              return '/direcao/home';
-          }
+        if (logado && naRotaPublica) return _homeForRole(_auth.role);
+
+        final role = _auth.role;
+        if (logado &&
+            role != null &&
+            !_canAccess(role, state.matchedLocation)) {
+          return _homeForRole(role);
         }
         return null;
       },
       routes: [
         GoRoute(path: '/', builder: (_, __) => const SplashView()),
         GoRoute(path: '/login', builder: (_, __) => const LoginView()),
-        GoRoute(path: '/cadastro_empresa', builder: (_, __) => const CadastroEmpresaView()),
-        GoRoute(path: '/direcao/home', builder: (_, __) => const DiretoriaHomeView()),
-        GoRoute(path: '/direcao/relatorios', builder: (_, __) => const RelatoriosView()),
-        GoRoute(path: '/manager/gerente', builder: (_, __) => const RequestsView()),
-        GoRoute(path: '/manager/new_request', builder: (_, __) => const NovaSolicitacao()),
+        GoRoute(
+          path: '/cadastro_empresa',
+          builder: (_, __) => const CadastroEmpresaView(),
+        ),
+        GoRoute(
+          path: '/direcao/home',
+          builder: (_, __) => const DiretoriaHomeView(),
+        ),
+        GoRoute(
+          path: '/direcao/relatorios',
+          builder: (_, __) => const RelatoriosView(),
+        ),
+        GoRoute(
+          path: '/manager/gerente',
+          builder: (_, __) => const RequestsView(),
+        ),
+        GoRoute(
+          path: '/manager/new_request',
+          builder: (_, __) => const NovaSolicitacao(),
+        ),
         GoRoute(
           path: '/manager/jornada_view/:pedidoId',
           builder: (context, state) =>
               JornadaView(pedidoId: state.pathParameters['pedidoId']!),
         ),
-        GoRoute(path: '/rh/fila_pedidos', builder: (_, __) => FilaPedidosView()),
+        GoRoute(
+          path: '/rh/fila_pedidos',
+          builder: (_, __) => FilaPedidosView(),
+        ),
         GoRoute(
           path: '/rh/escala_pedidos/:id',
-          builder: (context, state) =>
-              EscalacaoView(pedido: state.extra as PedidoModel),
+          builder: (context, state) => EscalacaoView(
+            pedidoId: state.pathParameters['id']!,
+            pedido: state.extra,
+          ),
         ),
-        GoRoute(path: '/rh/cadastros/cadastro_funcoes', builder: (_, __) => const CadastroFuncoes()),
-        GoRoute(path: '/rh/cadastros/cadastro_colaboradores', builder: (_, __) => const CadastroColaboradores()),
+        GoRoute(
+          path: '/rh/cadastros/cadastro_funcoes',
+          builder: (_, __) => const CadastroFuncoes(),
+        ),
+        GoRoute(
+          path: '/rh/cadastros/cadastro_colaboradores',
+          builder: (_, __) => const CadastroColaboradores(),
+        ),
       ],
     );
+    _syncProviders();
+  }
+
+  String _homeForRole(String? role) {
+    switch (role) {
+      case 'gerente':
+        return '/manager/gerente';
+      case 'rh':
+        return '/rh/fila_pedidos';
+      case 'diretoria':
+      default:
+        return '/direcao/home';
+    }
+  }
+
+    Future<void> _iniciarDeepLinks() async {
+    // Link que abriu o app (app estava fechado)
+    final uriInicial = await _appLinks.getInitialLink();
+    if (uriInicial != null) {
+      _tratarDeepLink(uriInicial);
+    }
+
+    // Links recebidos com o app já aberto
+    _linkSubscription = _appLinks.uriLinkStream.listen(
+      _tratarDeepLink,
+      onError: (err) => debugPrint('Erro no deep link: $err'),
+    );
+  }
+
+    void _tratarDeepLink(Uri uri) {
+    if (uri.scheme == 'io.supabase.freelance' && uri.host == 'reset-callback') {
+      Supabase.instance.client.auth.getSessionFromUrl(uri);
+      // O AuthProvider já escuta onAuthStateChange e vai setar
+      // AuthStatus.passwordRecovery automaticamente daqui em diante.
+    }
+  }
+
+  
+
+  bool _canAccess(String role, String location) {
+    if (location.startsWith('/manager')) return role == 'gerente';
+    if (location.startsWith('/rh')) return role == 'rh';
+    if (location.startsWith('/direcao')) return role == 'diretoria';
+    return true;
+  }
+
+  void _syncProviders() {
+    final empresaId = _auth.empresaId;
+    if (!_auth.autenticado || empresaId == null) {
+      if (_initializedEmpresaId == null) return;
+      _initializedEmpresaId = null;
+      context.read<PessoaProvider>().limpar();
+      context.read<FuncaoProvider>().limpar();
+      context.read<PedidoProvider>().limpar();
+      context.read<EscalacaoProvider>().limpar();
+      context.read<LojaProvider>().limpar();
+      context.read<UsuarioProvider>().limpar();
+      return;
+    }
+
+    if (_initializedEmpresaId == empresaId) return;
+    _initializedEmpresaId = empresaId;
+    context.read<PessoaProvider>().inicializar(empresaId);
+    context.read<FuncaoProvider>().inicializar(empresaId);
+    context.read<PedidoProvider>().inicializar(empresaId);
+    context.read<EscalacaoProvider>().inicializar(empresaId);
+    context.read<LojaProvider>().inicializar(empresaId);
+    context.read<UsuarioProvider>().inicializar(empresaId);
+  }
+
+  @override
+  void dispose() {
+    _linkSubscription?.cancel();
+    _auth.removeListener(_syncProviders);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.watch<AuthProvider>();
-
-    // Inicializa providers quando autenticar
-    if (auth.autenticado && auth.empresaId != null) {
-      final id = auth.empresaId!;
-      context.read<PessoaProvider>().inicializar(id);
-      context.read<FuncaoProvider>().inicializar(id);
-      context.read<PedidoProvider>().inicializar(id);
-      context.read<EscalacaoProvider>().inicializar(id);
-      context.read<UsuarioProvider>().inicializar(id);
-    }
-
     return MaterialApp.router(
       title: 'Freelance App',
       theme: AppTheme.data,
       routerConfig: _router,
     );
+  }
+}
+
+
+class _AuthRouterRefresh extends ChangeNotifier {
+  AuthStatus _ultimoStatus;
+
+  _AuthRouterRefresh(AuthProvider auth) : _ultimoStatus = auth.status {
+    auth.addListener(() {
+      if (auth.status != _ultimoStatus) {
+        _ultimoStatus = auth.status;
+        notifyListeners();
+      }
+    });
   }
 }

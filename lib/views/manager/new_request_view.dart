@@ -55,6 +55,15 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
       return;
     }
 
+    if (!dataFim!.isAfter(dataInicio!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('A data final deve ser posterior à data inicial'),
+        ),
+      );
+      return;
+    }
+
     if (_funcaoSelecionada == null) {
       ScaffoldMessenger.of(
         context,
@@ -79,6 +88,14 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
       return;
     }
 
+    final quantidade = int.tryParse(quantidadeController.text.trim());
+    if (quantidade == null || quantidade <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe uma quantidade válida')),
+      );
+      return;
+    }
+
     final novoPedido = PedidoModel(
       id: '', // gerado pelo Supabase
       lojaId: _lojaSelecionada!,
@@ -86,7 +103,7 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
       funcaoId: _funcaoSelecionada!,
       dataInicio: dataInicio!,
       dataFim: dataFim!,
-      quantidade: int.parse(quantidadeController.text),
+      quantidade: quantidade,
       observacoes: observacaoController.text,
       status: 'solicitado',
       dataCriacao: DateTime.now(),
@@ -212,6 +229,8 @@ class _NovaSolicitacaoState extends State<NovaSolicitacao> {
                           enabled: !pedidoLoading,
                           validator: (value) => (value == null || value.isEmpty)
                               ? 'Campo obrigatório'
+                              : (int.tryParse(value.trim()) ?? 0) <= 0
+                              ? 'Informe uma quantidade válida'
                               : null,
                           decoration: const InputDecoration(
                             labelText: 'Quantidade de Pessoas',

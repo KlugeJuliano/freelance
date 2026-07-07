@@ -19,12 +19,16 @@ class LojaProvider extends ChangeNotifier {
   }
 
   Future<void> fetchLojas() async {
-    // Se precisar filtrar por empresa futuramente, usar _empresaId
+    if (_empresaId == null) return;
     _loading = true;
     notifyListeners();
 
     try {
-      final data = await supabase.from('lojas').select().order('nome');
+      final data = await supabase
+          .from('lojas')
+          .select()
+          .eq('empresa_id', _empresaId!)
+          .order('nome');
       _lojas = (data as List).map((row) => LojaModel.fromMap(row)).toList();
     } catch (e) {
       // erro silencioso ou tratar se necessário
